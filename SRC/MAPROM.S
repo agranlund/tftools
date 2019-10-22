@@ -22,7 +22,6 @@ COOKIE_PMMU	EQU	$504d4d55
 section bss
 ;--------------------------------------------------------------
 gKeepResident		ds.b	1
-gRomBuffer		ds.l	1
 
 ;--------------------------------------------------------------
 section data
@@ -97,43 +96,38 @@ RamExists:
 	move.l	#$e00000,a3			; Tos 3.xx : 512Kb at 0xE00000
 	move.l	#$80000,d3			; Tos 4.xx : 512Kb at 0xE00000
 RomSizeDone:
+	cmp.l	#$e00000,a3			; We only support rom at 0x00E00000
+	beq	RomAddrOk
+	rts
 
-	; allocate ram
+RomAddrOk:
+	; allocate ram for rom buffer
 	move.w	#1,-(sp)			; allocate alt-ram only
 	move.l	d3,d4
-	add.l	#$8000,d4
-	move.l	d4,-(sp)			; size + 32k
+	add.l	#$8000,d4			; size + 32k
+	move.l	d4,-(sp)			
 	move.w	#68,-(sp)			; Mxalloc
 	trap	#1
 	addq.l	#8,sp
 	tst.l	d0				; memory allocated?
 	bne	RamAllocatedOk
-	;lea	sNoRam(pc),a0			; unable to allocate ram
-	;bsr	SYS_Print
 	rts
 RamAllocatedOk:
 	add.l 	#$7FFF,d0			; allign for 32k pages
 	and 	#$8000,d0
-	move.l 	d0,gRomBuffer			; store ptr to rombuffer
 
-	; copy rom -> ram
-	move.l	a3,a0
-	exg.l	d0,a4				; a4 = dst, a3 = src
-	move.l	d3,d0
-	lsr.l	#2,d0				; d0 = num longs to copy
-CopyToRam:
+	; copy rom to tt-ram
+	move.l 	d0,a4				; a4 = dst, a3 = src
+	lsr.l	#2,d3				; d3 = num longs to copy
+CopyRomToRam:
 	move.l	(a3)+,(a4)+
-	subq.l	#1,d0
-	bne	CopyToRam
+	subq.l	#1,d3
+	bne	CopyRomToRam
 
-	; configure mmu
-	move.l	gRomBuffer,d0
-	or	#5,d0				; page + writeprotect flags
-	; ptestr #2,([8,a0]),#7,a0
-	dc.b	$F0,$30,$9F,$12,$01,$71,$00,$00,$00,$08
-	move.l d0,(a0)
-	; pflusha
-	dc.b	$F0,$00,$24,$00
+	or.l	#5,d0				; map 0x00E00000-0x00EFFFFF to tt-ram
+	move.l	d0,$7f8				; at offset 0xf8 in default mmu table
+	dc.b	$F0,$00,$24,$00			; pflusha
+
 	move.l	#COOKIE_PMMU,d0			; Write 'PMMU' cookie
 	move.l	#0,d1
 	bsr 	CK_WriteJar
