@@ -1,14 +1,20 @@
-;--------------------------------------------------------------
+;--------------------------------------------------------------------------
 ; MAPROM.S
 ;
 ;	Fastram utility for TerribleFire accelerator.
 ;	Loads contents of TOS ROMs into FastRAM.
 ;
-; This file is distributed under the GPL v2 or at your
-; option any later version.  See LICENSE.TXT for details.
+; This file is distributed under the GPL v2, or at your option any
+; later version.  See LICENSE.TXT for details.
+;
+; Version history:
+;
+; 1.1:	Remap 512Kb instead of 1MB, leaving $E80000-$EFFFFF untouched
+;
+; 1.0:	initial release. Remaps $E00000-$EFFFFF to TT-RAM 
 ;
 ; Anders Granlund, 2019
-;--------------------------------------------------------------
+;--------------------------------------------------------------------------
 	include "LIB\SYS.S"
 	include "LIB\CPU.S"
 	include "LIB\TTRAM.S"
@@ -16,7 +22,6 @@
 	include "LIB\COOKIE.S"
 
 COOKIE_PMMU	EQU	$504d4d55
-
 
 ;--------------------------------------------------------------
 section bss
@@ -26,10 +31,8 @@ gKeepResident		ds.b	1
 ;--------------------------------------------------------------
 section data
 ;--------------------------------------------------------------
-sSuccess		dc.b	13,10,"ROM mapped to TT-RAM",0
-sNoRam			dc.b	13,10,"Not enough TT-RAM",0
-sRamFound		dc.b	13,10,"TT-RAM detected: ",0
-sMB			dc.b	"MB",0
+sVersion		dc.b	13,10,$1b,'p',"Maprom v1.1 active",$1b,'q',13,10,0
+
 
 ;--------------------------------------------------------------
 section text
@@ -43,8 +46,14 @@ Main
 	lea	MainSU(pc),a0
 	bsr	SYS_SupervisorCall
 	tst.b	gKeepResident
-	bne	SYS_QuitKeepResident
+	bne	MainSuccess
 	rts
+MainSuccess:
+	lea	sVersion(pc),a0
+	bsr	SYS_Print	
+	bra	SYS_QuitKeepResident
+	rts
+
 MainSU:
 	bsr	CPU_Get
 	cmp.l	#30,d0				; CPU must be 68030
@@ -63,20 +72,17 @@ DetectRam:
 	bsr	TTRAM_Detect			; detect tt-ram
 	tst.l	d0
 	bne	InstallRam
-	;lea	sNoRam(pc),a0			; no tt-ram detected.
-	;bsr	SYS_Print
 	rts
 InstallRam:
-	movem.l d0-d2/a0-a2,-(sp)
-	lea	sRamFound(pc),a0	
-	bsr	SYS_Print			; display amount of tt-ram
-	swap	d0
-	ror.l	#4,d0				; in MB
-	;lsl.l	#6,d0				; in KB
-	bsr	SYS_PrintLong
-	lea	sMB(pc),a0
-	bsr	SYS_Print	
-	movem.l (sp)+,d0-d2/a0-a2
+	;movem.l d0-d2/a0-a2,-(sp)
+	;lea	sRamFound(pc),a0	
+	;bsr	SYS_Print			; display amount of tt-ram
+	;swap	d0
+	;ror.l	#4,d0				; in MB
+	;bsr	SYS_PrintLong
+	;lea	sMB(pc),a0
+	;bsr	SYS_Print	
+	;movem.l (sp)+,d0-d2/a0-a2
 	bsr	TTRAM_Install			; install tt-ram + frb
 	bsr	MMU030_Install			; configure PMMU as TT/Falcon
 	move.b	#1,gKeepResident		; keep resident
@@ -104,7 +110,7 @@ RomAddrOk:
 	; allocate ram for rom buffer
 	move.w	#1,-(sp)			; allocate alt-ram only
 	move.l	d3,d4
-	add.l	#$8000,d4			; size + 32k
+	add.l	#$8400,d4			; size + 32k + 1k
 	move.l	d4,-(sp)			
 	move.w	#68,-(sp)			; Mxalloc
 	trap	#1
@@ -124,16 +130,31 @@ CopyRomToRam:
 	subq.l	#1,d3
 	bne	CopyRomToRam
 
-	or.l	#5,d0				; map 0x00E00000-0x00EFFFFF to tt-ram
-	move.l	d0,$7f8				; at offset 0xf8 in default mmu table
+	; create TID table for 0x00E00000 - 0x00EFFFFF
+	move.l	d0,d1
+	or.l	#5,d1				; d1 = relocate adress | PAGE | WRITEPROTECT
+	move.l	a4,d0
+	move.l	#16,d3				; d3 = 16 entires (512Kb)
+CreateTID1a:
+	move.l	d1,(a4)+
+	add.l	#$8000,d1
+	sub.l	#1,d3
+	bne	CreateTID1a
+	move.l	#$E80001,d1			; d1 = no relocation | PAGE
+	move.l	#16,d3				; d3 = 16 entries (512Kb)
+CreateTID1b:	
+	move.l	d1,(a4)+
+	add.l	#$8000,d1
+	sub.l	#1,d3
+	bne	CreateTID1b
+	or.l	#2,d0				; map 0xE00000-0xEFFFFF to table TID1
+	move.l	d0,$7f8				; at offset 0xf8 in default TIA table
 	dc.b	$F0,$00,$24,$00			; pflusha
 
+MmuSetupDone:
 	move.l	#COOKIE_PMMU,d0			; Write 'PMMU' cookie
 	move.l	#0,d1
 	bsr 	CK_WriteJar
-
-	lea	sSuccess(pc),a0
-	bsr	SYS_Print
 
 	move.b	#1,gKeepResident		; keep resident
 	rts
