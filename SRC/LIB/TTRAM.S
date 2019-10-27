@@ -14,7 +14,6 @@
 ;
 ; Anders Granlund, 2019
 ;--------------------------------------------------------------
-
 TTRL_MEMBOTTOM		EQU	$01000000
 TTRL_MEMMAXSIZE		EQU	256
 TTRL_FASTRAMMAGIC	EQU	$1357bd13
@@ -23,7 +22,6 @@ TTRL_FASTRAMCOOKIE	EQU	$5f465242
 ;--------------------------------------------------------------
 section bss
 ;--------------------------------------------------------------
-gTTRL_FRB		ds.b 65536 	; fastram buffer
 gTTRL_RamTop		ds.l 1		; fastram top
 gTTRL_BushandlerOld	ds.l 1		; old bus error handler
 
@@ -32,7 +30,7 @@ section text
 ;--------------------------------------------------------------
 
 ;--------------------------------------------------------------
-TTRAM_GetInstalled
+TTRAM_GetInstalled:
 ; returns:
 ;	d0: size
 ;	d1: ram top
@@ -43,7 +41,7 @@ TTRAM_GetInstalled
 _ttrl_detectins1
 	move.l	#TTRL_MEMBOTTOM,d2
 	move.l	$5a4.w,d1			; Ask bios for fastram top
-	cmp.l	d2,d1				; Verify it's in TT ram range
+	cmp.l	d2,d1				; Verify it is in TT ram range
 	ble	_ttrl_detectins_err
 	move.l	d1,d0
 	sub.l	d2,d0
@@ -56,7 +54,7 @@ _ttrl_detectins_err
 
 
 ;--------------------------------------------------------------
-TTRAM_Detect
+TTRAM_Detect:
 ; returns:
 ;	d0: size
 ;	d1: ram top
@@ -109,7 +107,7 @@ _ttrl_detectram_bushandler:
 
 
 ;--------------------------------------------------------------
-TTRAM_Install
+TTRAM_Install:
 ; inputs:
 ;	d0: size
 ;--------------------------------------------------------------
@@ -122,7 +120,13 @@ TTRAM_Install
 	move.w	#20,-(sp)			; maddalt(size, start)
 	trap	#1				; 
 	add.l	#10,sp
+
+	move.w	#0,-(sp)			; allocate st-ram only
+	move.l	#$10000,-(sp)			; 64Kb			
+	move.w	#68,-(sp)			; Mxalloc
+	trap	#1
+	addq.l	#8,sp
+	move.l	d0,d1				; 64Kb fastram buffer
 	move.l	#$5f465242,d0			; '_FRB'
-	move.l	#gTTRL_FRB,d1			; 64KB buffer 
 	bsr 	CK_WriteJar			; write cookie
 	rts

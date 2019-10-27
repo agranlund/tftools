@@ -12,9 +12,9 @@
 ;--------------------------------------------------------------
 	include "LIB\SYS.S"
 	include "LIB\CPU.S"
-	include "LIB\TTRAM.S"
 	include "LIB\MMU030.S"
 	include "LIB\COOKIE.S"
+	include "LIB\TTRAM.S"
 
 ;--------------------------------------------------------------
 section bss
@@ -25,8 +25,8 @@ section data
 ;--------------------------------------------------------------
 sAlreadyInstalled	dc.b	13,10,"TT-RAM already registered",0
 sNoRam			dc.b	13,10,"TT-RAM not found",0
-sRamFound		dc.b	13,10,"TT-RAM detected: ",0
-sMB			dc.b	"MB",0
+sRamFound		dc.b	13,10,"TT-RAM registered: ",0
+sMB			dc.b	"MB",13,10,0
 
 ;--------------------------------------------------------------
 section text
@@ -42,7 +42,7 @@ Main
 	bne	InstallTSR
 	rts
 InstallTSR:
-	bra	SYS_QuitKeepResident
+	bra	SYS_QuitKeepResidentMallocOnly
 	rts
 
 MainSU:
@@ -82,7 +82,11 @@ Install:
 	bsr	CPU_Get
 	cmp.l	#30,d0				; CPU is 68030?
 	bne	InstallDone
+
+	move.l	#0,d0
 	bsr	MMU030_Install			; configure PMMU as TT/Falcon
+
+	;bsr	CPU_CacheClear			; flush cache
 
 InstallDone:
 	move.l	#1,d0				; keep frb resident

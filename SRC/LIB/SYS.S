@@ -21,9 +21,9 @@
 ;--------------------------------------------------------------
 section bss
 ;--------------------------------------------------------------
-		ds.l 128	; 512 byte stack
+gSys_StackTop	ds.l 256	; 1024 byte stack
 gSYS_Stack	ds.l 2
-gSYS_TsrSize	ds.l 0		; program size for TSR
+gSYS_TsrSize	ds.l 1		; program size for TSR
 
 
 ;--------------------------------------------------------------
@@ -37,25 +37,26 @@ _entrypoint
   	move.l	4(sp),a0		; a0 = basepage
   	lea	gSYS_Stack(pc),sp	; initalize stack
       	move.l	#100,d0			; basepage size
+	add.l	#$1000,d0		; 
   	add.l	$c(a0),d0		; text size
   	add.l	$14(a0),d0		; data size
   	add.l	$1c(a0),d0		; bss size
 	lea	gSYS_TsrSize(pc),a1
 	move.l	d0,(a1)
   	
-  	move.l	d0,-(sp)		; Mshrink()
-  	move.l	a0,-(sp)
-  	clr.w	-(sp)
-  	move.w	#$4a,-(sp)
-  	trap	#1
-  	add.l	#12,sp
+	move.l	d0,-(sp)		; Mshrink()
+	move.l	a0,-(sp)
+	clr.w	-(sp)
+	move.w	#$4a,-(sp)
+	trap	#1
+	add.l	#12,sp
  
   	bsr	Main			; Main()
  
 
 
 ;--------------------------------------------------------------
-SYS_Quit
+SYS_Quit:
 ;--------------------------------------------------------------
 	move.w	#0,-(sp)		; Pterm(0)
 	move.w	#76,-(sp) 
@@ -63,7 +64,7 @@ SYS_Quit
 	addq.l	#4,sp
 
 ;--------------------------------------------------------------
-SYS_QuitKeepResident
+SYS_QuitKeepResident:
 ;--------------------------------------------------------------
 	move.w	#0,-(sp)		; Ptermres()
 	lea	gSYS_TsrSize(pc),a0
@@ -73,7 +74,16 @@ SYS_QuitKeepResident
 	addq.l	#8,sp
 
 ;--------------------------------------------------------------
-SYS_Print
+SYS_QuitKeepResidentMallocOnly:
+;--------------------------------------------------------------
+	move.w	#0,-(sp)		; Ptermres()
+	move.l	#$100,-(sp)
+	move.w	#49,-(sp)
+	trap	#1
+	addq.l	#8,sp
+
+;--------------------------------------------------------------
+SYS_Print:
 ;	a0 = string data
 ;--------------------------------------------------------------
 	movem.l d0-d2/a0-a2,-(sp)
@@ -85,7 +95,7 @@ SYS_Print
 	rts
 
 ;--------------------------------------------------------------
-SYS_PrintLong
+SYS_PrintLong:
 ; d0 = value
 ;--------------------------------------------------------------
 	movem.l d1-d3/a0-a2,-(sp)
@@ -123,7 +133,7 @@ _syspl_loop
 	rts
 
 ;--------------------------------------------------------------
-SYS_Waitkey
+SYS_Waitkey:
 ;--------------------------------------------------------------
 	movem.l d0-d2/a0-a2,-(sp)
 	move.w #1,-(sp)			; Cconin()
@@ -133,14 +143,13 @@ SYS_Waitkey
 	rts
 
 ;--------------------------------------------------------------
-SYS_SupervisorCall
+SYS_SupervisorCall:
 ;--------------------------------------------------------------
  	pea	(a0)
 	move.w 	#38,-(sp)
  	trap 	#14
  	addq.l 	#6,sp		
 	rts
-
 
 
 

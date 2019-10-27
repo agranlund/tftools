@@ -35,6 +35,15 @@ MAPROM Paired with NVDI makes for a very snappy system!
 The ROM images must be at location 0xE00000 so you need to be running
 at least TOS 2.xx, or EmuTOS 256Kb or bigger.
 
+----------------------------------------------------------------------------
+BLITOFF.PRG
+----------------------------------------------------------------------------
+Disables the Blitter for programs outside of ST-RAM.
+This fixes the issue with TOS2.06 and NVDI not rendering correctly or
+crashing when being put in FastRAM.
+Games and demos will still be able to use the Blitter as long as they
+are running from ST-RAM (tested with "Hard'n'Heavy" + BlitB)
+
 
 ----------------------------------------------------------------------------
 FASTRAM.PRG

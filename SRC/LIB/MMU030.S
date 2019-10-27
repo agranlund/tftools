@@ -15,47 +15,28 @@
 ; Anders Granlund, 2019
 ;--------------------------------------------------------------
 
-
 ;--------------------------------------------------------------
-section data
+section bss
 ;--------------------------------------------------------------
-PMMU030_CRP:	dc.l $80000002,PMMU030_TABLE_TIA	; no limit, short desc, addr $700
-PMMU030_TC:	dc.l $80f04445 				; enable, pagesize 32k, IS=0, TIA=4, TIB=4, TIC=4, TID=5
-PMMU030_TTR0:	dc.l $017e8107 				; 0x01000000-0x7fffffff, cache allowed
-PMMU030_TTR1:	dc.l $807e8507 				; 0x80000000-0xfeffffff, cache inhibited
-
+gMMU030_CRP	ds.l	2
+gMMU030_TC	ds.l	1
+gMMU030_TTR0	ds.l	1
+gMMU030_TTR1	ds.l	1
 
 ;--------------------------------------------------------------
 section text
 ;--------------------------------------------------------------
 
-PMMU030_TABLE_TIA	equ $700
-PMMU030_TABLE_TIB1	equ $740
-PMMU030_TABLE_TIB2	equ $780
-PMMU030_TABLE_TIC	equ $7C0
-
-PMOVE030_TC	MACRO
-		dc.l	$f0394000,\1	; pmove addr,tc
-		ENDM
-
-PMOVE030_CRP	MACRO
-		dc.l	$f0394c00,\1	; pmove addr,crp
-		ENDM
-
-PMOVE030_TTR0	MACRO
-		dc.l	$f0390800,\1	; pmove addr,ttr0
-		ENDM
-
-PMOVE030_TTR1	MACRO
-		dc.l	$f0390c00,\1	; pmove addr,ttr1
-		ENDM
-
-PFLUSH030	MACRO
-		dc.l	$f0002400	; pflusha
-		ENDM
+PMMU030_TABLE_TIA	equ $00
+PMMU030_TABLE_TIB1	equ $40
+PMMU030_TABLE_TIB2	equ $80
+PMMU030_TABLE_TIC	equ $C0
 
 PMMU030_TABLE	MACRO
-		move.l	#\1+$02,(a0)+
+		move.l	d0,d1
+		add.l	#\1,d1
+		or.l	#2,d1
+		move.l	d1,(a0)+
 		ENDM
 
 PMMU030_PAGE	MACRO
@@ -68,9 +49,26 @@ PMMU030_PAGE_CI	MACRO
 
 
 ;--------------------------------------------------------------
-MMU030_Install
+MMU030_Install:
+; input: d0 = base address, or 0 to allocate
+; return: d0 = tia table location
 ;--------------------------------------------------------------
-	lea.l		PMMU030_TABLE_TIA,a0
+	tst.l	d0
+	bne	_mmu_ram_ok
+	move.w	#0,-(sp)			; allocate from st ram
+	move.l	#$200,-(sp)			; 256 + 256 bytes for allignment
+	move.w	#68,-(sp)			; Mxalloc
+	trap	#1
+	addq.l	#8,sp
+	tst.l	d0
+	bne	_mmu_ram_ok
+	rts
+_mmu_ram_ok:
+	add.l	#$FF,d0
+	and.l	#-$100,d0
+	move.l	a0,-(sp)
+	move.l	d1,-(sp)
+	move.l	d0,a0			; a0 = curr address
 
 	; PMMU030_TABLE_TIA: 0x00000000-0xffffffff
         PMMU030_TABLE	PMMU030_TABLE_TIB1	; 0x00000000-0x0fffffff -> table tib1
@@ -144,11 +142,19 @@ MMU030_Install
         PMMU030_PAGE	$00e00000
         PMMU030_PAGE_CI	$00f00000		; 0xfff00000-0xffffffff -> 0x00f00000-0x00ffffff, cache inhibit
 
-	PMOVE030_CRP	PMMU030_CRP
-	PMOVE030_TC	PMMU030_TC
-	PMOVE030_TTR0	PMMU030_TTR0
-	PMOVE030_TTR1	PMMU030_TTR1
-	PFLUSH030
+	move.l	d0,gMMU030_CRP+4
+	move.l	#$80000002,gMMU030_CRP
+	move.l	#$80f04445,gMMU030_TC		; enable, pagesize 32k, IS=0, TIA=4, TIB=4, TIC=4, TID=5
+	move.l	#$017e8107,gMMU030_TTR0		; 0x01000000-0x7fffffff, cache allowed
+	move.l	#$807e8507,gMMU030_TTR1		; 0x80000000-0xfeffffff, cache inhibited
 
+	dc.l	$f0394c00,gMMU030_CRP		; pmove addr,crp
+	dc.l	$f0394000,gMMU030_TC		; pmove addr,tc
+	dc.l	$f0390800,gMMU030_TTR0		; pmove addr,ttr0
+	dc.l	$f0390c00,gMMU030_TTR1		; pmove addr,ttr1
+	dc.l	$f0002400			; pflusha
+	
+	move.l	(sp)+,d1
+	move.l	(sp)+,a0
 	rts
 
