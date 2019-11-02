@@ -8,6 +8,10 @@
 ; This file is distributed under the GPL v2 or at your
 ; option any later version.  See LICENSE.TXT for details.
 ;
+;
+; 1.1:  minor bugfixes.
+; 1.0:	initial release.
+;
 ; Anders Granlund, 2019
 ;--------------------------------------------------------------
 	include "LIB\SYS.S"
@@ -15,6 +19,7 @@
 	include "LIB\MMU030.S"
 	include "LIB\COOKIE.S"
 	include "LIB\TTRAM.S"
+
 
 ;--------------------------------------------------------------
 section bss
@@ -48,7 +53,7 @@ InstallTSR:
 MainSU:
 	bsr	CPU_Get
 	cmp.l	#20,d0
-	bge	CpuOk				; CPU at least 68020?
+	bcc	CpuOk				; CPU at least 68020?
 	clr.l	d0
 	rts
 CpuOk:

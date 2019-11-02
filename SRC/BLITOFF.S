@@ -9,6 +9,7 @@
 ;
 ; Version history:
 ;
+; 1.1:  minor bugfixes.
 ; 1.0:	initial release.
 ;
 ; Anders Granlund, 2019
@@ -19,14 +20,23 @@
 	include "LIB\TTRAM.S"
 	include "LIB\BLITTER.S"
 
-
+;--------------------------------------------------------------
 COOKIE_MAGIC	EQU	$424f4646	; 'BOFF'
+
+OPT_DEBUG	SET	0		; debug mode + symbols
+;--------------------------------------------------------------
+
+;	COMMENT	HEAD=6
+
+	IFNE	OPT_DEBUG
+	OPT	XDEBUG
+	ENDC
 
 
 ;--------------------------------------------------------------
 section data
 ;--------------------------------------------------------------
-sVersion		dc.b	13,10,$1b,'p',"BlitterOff v1.0 active",$1b,'q',13,10,0
+sVersion		dc.b	13,10,$1b,'p',"BlitterOff v1.1 active",$1b,'q',13,10,0
 
 ;--------------------------------------------------------------
 section bss
@@ -71,10 +81,12 @@ BlitterOk:
 CookieOk:
 
 	; no point running this unless we have fastram
+	IFNE	OPT_DEBUG
 	bsr	TTRAM_GetInstalled
 	tst.l	d0
 	bne	TTRamPresent
 	rts
+	ENDC
 TTRamPresent:
 
 	; turn off blitter
@@ -130,9 +142,9 @@ Trap14_Blitmode:
 BlitModeGet:
 	move.l	-8(a0),d0
 	cmp.l	#$A00000,d0		; no blitter for callers outside ST-RAM
-	bge	BlitModeIgnore
-	cmp.l	#Main,d0
-	ble	BlitModeIgnore	
+	bcc	BlitModeIgnore
+	cmp.l	#Main,d0		; or from before us
+	bcs	BlitModeIgnore
 	move.w	gStatus,d0		; blitter status
 	rte
 BlitModeIgnore:

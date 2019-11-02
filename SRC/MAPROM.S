@@ -9,6 +9,8 @@
 ;
 ; Version history:
 ;
+; 1.3:	Minor bugfixes.
+;
 ; 1.2:  Early exit if TOS is not at $E00000
 ;       Allocate new MMU table instead of assuming old one at $700
 ;
@@ -30,7 +32,16 @@
 	include "LIB\COOKIE.S"
 	include "LIB\TTRAM.S"
 
+
+;--------------------------------------------------------------
 COOKIE_PMMU	EQU	$504d4d55
+OPT_DEBUG	SET	0		; debug mode + symbols
+;--------------------------------------------------------------
+
+	IFNE	OPT_DEBUG
+	OPT	XDEBUG
+	ENDC
+
 
 ;--------------------------------------------------------------
 section bss
@@ -40,7 +51,7 @@ gKeepResident		ds.b	1
 ;--------------------------------------------------------------
 section data
 ;--------------------------------------------------------------
-sVersion		dc.b	13,10,$1b,'p',"Maprom v1.2 active",$1b,'q',13,10,0
+sVersion		dc.b	13,10,$1b,'p',"Maprom v1.3 active",$1b,'q',13,10,0
 
 
 ;--------------------------------------------------------------
@@ -80,10 +91,10 @@ MmuOk:
 	move.w	2(a0),d0			; d0 = tos version number
 	move.l	#$30000,d3			; d3 = 192Kb (Tos 1.xx)
 	cmp.w	#$200,d0
-	blt	RomSizeDone
+	bcs	RomSizeDone
 	move.l	#$40000,d3			; d3 = 256Kb (Tos 2.xx)
 	cmp.w	#$300,d0	
-	blt	RomSizeDone
+	bcs	RomSizeDone
 	move.l	#$80000,d3			; d3 = 512Kb (Tos 3.xx / 4.xx)
 RomSizeDone:
 	move.l	8(a0),a3			; a3 = TOS start addr

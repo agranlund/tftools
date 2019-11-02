@@ -63,7 +63,7 @@ CPU_CacheClear:
 	move.l	d0,-(sp)
 	bsr	CPU_Get
 	cmp.l	#20,d0
-	bge	_cpu_flushcache
+	bcc	_cpu_flushcache
 	move.l	(sp)+,d0
 	rts
 _cpu_flushcache:

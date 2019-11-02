@@ -35,6 +35,46 @@ MAPROM Paired with NVDI makes for a very snappy system!
 The ROM images must be at location 0xE00000 so you need to be running
 at least TOS 2.xx, or EmuTOS 256Kb or bigger.
 
+
+----------------------------------------------------------------------------
+BLITFIX.PRG
+----------------------------------------------------------------------------
+Fixes Blitter issues for machines that has TT-RAM, while still allowing
+programs and TOS to use the blitter.
+The program does nothing unless TT-RAM is available, the CPU is 32bit,
+and a blitter is actually installed - so it's safe to leave the program
+in the AUTO folder even if you toggle off the accelerator,
+remove the blitter, etc.
+
+This program should run after MAPROM.PRG.
+
+
+* Mainly for TOS 2.06/3.06 & EmuTOS. Limited use for other versions.
+
+
+NVDI / WARP9:
+  - These programs are tricked into thinking that the blitter is not
+    present, thus preventing them from crashing.
+
+Atari TOS 2.06 / 3.06:
+  - VDI/LineA blitter routines are patched to be able to fall back
+    to software routines when addresses are outside of blitter range.
+
+EmuTOS:
+  - Allows programs running in ST-RAM to know the real status
+    of the blitter.
+    (EmuTOS will by default hide the blitter if TT-RAM is present)
+
+  - If you have a custom build of EmuTOS which is not lying about
+    the blitter, then this program does nothing.
+
+
+Other TOS versions:
+  - TOS is made to believe the blitter is not present
+  - Only programs running in ST-RAM will be told that blitter is present
+
+
+
 ----------------------------------------------------------------------------
 BLITOFF.PRG
 ----------------------------------------------------------------------------
