@@ -123,13 +123,13 @@ MainSU:
 	rts
 _CookieOk:
 	bsr	BLIT_Detect			; Check for blitter
-	tst.l	d0
+	tst.w	d0
 	bne	_BlitterOk
 	rts
 _BlitterOk:
 	IFEQ	OPT_DEBUG
 	bsr	CPU_Get				; Only useful for 020 or better
-	cmp.l	#20,d0
+	cmp.w	#20,d0
 	bge	_CpuOk
 	rts
 _CpuOk:

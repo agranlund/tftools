@@ -101,29 +101,26 @@ SYS_PrintLong:
 	movem.l d1-d3/a0-a2,-(sp)
 	move.l  #131129,d1
 	moveq   #1,d2
-_syspl_next
-	pea     _syspl_loop(pc)
+.next:	pea     .loop(pc)
 	movem.l d1-d3/a0-a2,-(sp)
 	move.l  d2,d3
 	add.l   d3,d3
 	add.l   d3,d3
 	add.l   d3,d2
-	bcs.s   _syspl_fix
+	bcs.s   .fix
 	add.l   d2,d2
 	cmp.l   d2,d0
-	bcc.s   _syspl_next
+	bcc.s   .next
 	sub.l   d2,d0
 	movem.l (sp)+,d1-d3/a0-a2
 	rts
-_syspl_fix
-	lea     28(sp),sp
+.fix	lea     28(sp),sp
 	subq.b  #5,d1
 	sub.l   d3,d2
 	sub.l   d3,d0
 	sub.l   d2,d0
-_syspl_loop
-	add.l   d2,d0
-	dbcs    d1,_syspl_loop
+.loop	add.l   d2,d0
+	dbcs    d1,.loop
 	sub.l   d2,d0
 	move.l  d0,-(sp)
 	move.l  d1,-(sp)

@@ -24,22 +24,20 @@ section text
 ;--------------------------------------------------------------
 BLIT_Detect:
 ; returns:
-;	d0: 1 or 0
+;	d0.w: 1 or 0
 ;--------------------------------------------------------------
 	move.w	sr,d1
 	or.w	#$0700,sr			; disable interrupts
-	move.l	#0,d0
+	moveq.l	#0,d0				; assume no blitter
 	move.l	sp,a2				; save old stack pointer
 	move.l	$8,gBLIT_BushandlerOld		; save old bus handler
-	move.l	#_blit_bushandler,$8		; install new bus handler
+	move.l	#.fail,$8			; install new bus handler
 	tst.w	$FF8A00				; access blitter hardware
-	move.l	#1,d0				; have blitter
-_blit_detect_done:
-	move.l	gBLIT_BushandlerOld,$8		; restore bus handler
+	move.w	#1,d0				; have blitter
+.done:	move.l	gBLIT_BushandlerOld,$8		; restore bus handler
 	move.w	d1,sr				; restore interrupts
 	rts
-_blit_bushandler:
-	move.l	a2,sp				; restore stack to before bus error
-	bra	_blit_detect_done		; stop probing for memory
+.fail:	move.l	a2,sp				; restore stack to before bus error
+	bra	.done				; stop probing for memory
 
 

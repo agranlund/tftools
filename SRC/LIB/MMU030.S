@@ -54,17 +54,16 @@ MMU030_Install:
 ; return: d0 = tia table location
 ;--------------------------------------------------------------
 	tst.l	d0
-	bne	_mmu_ram_ok
-	move.w	#0,-(sp)			; allocate from st ram
+	bne	.ramOK
+	move.w	#3,-(sp)			; prefer tt-ram
 	move.l	#$200,-(sp)			; 256 + 256 bytes for allignment
 	move.w	#68,-(sp)			; Mxalloc
 	trap	#1
 	addq.l	#8,sp
 	tst.l	d0
-	bne	_mmu_ram_ok
+	bne	.ramOK
 	rts
-_mmu_ram_ok:
-	add.l	#$FF,d0
+.ramOK:	add.l	#$FF,d0
 	and.l	#-$100,d0
 	move.l	a0,-(sp)
 	move.l	d1,-(sp)

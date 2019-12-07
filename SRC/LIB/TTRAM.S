@@ -29,6 +29,8 @@ gTTRL_BushandlerOld	ds.l 1		; old bus error handler
 section text
 ;--------------------------------------------------------------
 
+
+
 ;--------------------------------------------------------------
 TTRAM_GetInstalled:
 ; returns:
@@ -37,19 +39,19 @@ TTRAM_GetInstalled:
 ;	d2: ram bottom
 ;--------------------------------------------------------------
 	cmp.l 	#TTRL_FASTRAMMAGIC,$5a8.w	; Ask bios for fastram magic
-	bne	_ttrl_detectins_err
-_ttrl_detectins1
+	bne	.err
 	move.l	#TTRL_MEMBOTTOM,d2
 	move.l	$5a4.w,d1			; Ask bios for fastram top
 	cmp.l	d2,d1				; Verify it is in TT ram range
-	ble	_ttrl_detectins_err
+	ble	.err
 	move.l	d1,d0
 	sub.l	d2,d0
+	move.l	d1,gTTRL_RamTop
 	rts		
-_ttrl_detectins_err
-	move.l	#0,d0
-	move.l	#0,d1
-	move.l	#0,d2
+.err:	moveq.l	#0,d0
+	moveq.l	#0,d1
+	moveq.l	#0,d2
+	move.l	#0,gTTRL_RamTop
 	rts
 
 
@@ -60,50 +62,41 @@ TTRAM_Detect:
 ;	d1: ram top
 ;	d2: ram bottom
 ;--------------------------------------------------------------
-	bsr 	_ttrl_detectram_su
+	bsr 	.detect
 	cmp.l	#TTRL_MEMBOTTOM,gTTRL_RamTop
-	ble	_TTRL_DetectRamFail
+	ble	.fail
 	move.l	#TTRL_MEMBOTTOM,d2		; d2 = ram bottom
 	move.l	gTTRL_RamTop,d1			; d1 = ram top
 	move.l	d1,d0
 	sub.l	d2,d0				; d0 = size
 	rts
-_TTRL_DetectRamFail:
-	move.l	#0,d0
+.fail:	move.l	#0,d0
 	move.l	#0,d1
 	move.l	#0,d2	
 	rts
-_ttrl_detectram_su:
+.detect:
 	move.l	#0,gTTRL_RamTop
 	cmp.l 	#TTRL_FASTRAMMAGIC,$5a8.w	; Ask bios for fastram magic
-	bne	_ttrl_detectram_probe
+	bne	.probe
 	move.l	$5a4.w,gTTRL_RamTop		; Ask bios for fastram top
 	cmp.l	#TTRL_MEMBOTTOM,gTTRL_RamTop	; Verify it's in TT ram range
-	ble	_ttrl_detectram_probe
+	ble	.probe
 	rts
-_ttrl_detectram_probe:
-	; Probe hardware for TT ram
-	move.l	sp,a6				; save old stack pointer
+.probe:	move.l	sp,a6				; save old stack pointer
 	move.l	$8,gTTRL_BushandlerOld		; save old bus handler
-	move.l	#_ttrl_detectram_bushandler,$8	; install new bus handler
+	move.l	#.err,$8			; install new bus handler
 	move.l	#TTRL_MEMBOTTOM,gTTRL_RamTop
 	move.w	#TTRL_MEMMAXSIZE,d3
-_ttrl_detectram_loop:
-	movea.l	(gTTRL_RamTop),a2
-	move.l	#$deadface,(a2)			; write test
-	move.l	(a2),d0
-	cmp.l	#$deadface,d0			; read test
-	bne	_ttrl_detectram_done
+.loop:	movea.l	(gTTRL_RamTop),a2
+	move.l	(a2),d0				; read test
 	add.l	#$00100000,gTTRL_RamTop		; check 1MB intervals
 	sub.w	#1,d3
 	tst.w	d3
-	bne	_ttrl_detectram_loop
-_ttrl_detectram_done:
-	move.l	gTTRL_BushandlerOld,$8		; restore bus handler
+	bne	.loop
+.done:	move.l	gTTRL_BushandlerOld,$8		; restore bus handler
 	rts
-_ttrl_detectram_bushandler:
-	move.l	a6,sp				; restore stack to before bus error
-	bra	_ttrl_detectram_done		; stop probing for memory
+.err:	move.l	a6,sp				; restore stack to before bus error
+	bra	.done				; stop probing for memory
 
 
 ;--------------------------------------------------------------
@@ -111,22 +104,35 @@ TTRAM_Install:
 ; inputs:
 ;	d0: size
 ;--------------------------------------------------------------
-	move.l	#TTRL_MEMBOTTOM,d1	
-	add.l	d0,d1				; d1 = memtop
-	move.l	d1,$5a4.w			; write fastram top
-	move.l	#TTRL_FASTRAMMAGIC,$5a8.w	; write fastram magic
 	move.l	d0,-(sp)			; size
 	move.l	#TTRL_MEMBOTTOM,-(sp)		; start
 	move.w	#20,-(sp)			; maddalt(size, start)
 	trap	#1				; 
-	add.l	#10,sp
+	add.l	#6,sp				; keep size on stack
+	tst.l	d0				; tos supports altram?
+	bne	.fail
 
 	move.w	#0,-(sp)			; allocate st-ram only
 	move.l	#$10000,-(sp)			; 64Kb			
 	move.w	#68,-(sp)			; Mxalloc
 	trap	#1
 	addq.l	#8,sp
+	tst.l	d0				; failed to allocate?
+	beq	.fail
+	cmp.l	#-32,d0				; mxalloc not available?
+	beq	.fail
+
 	move.l	d0,d1				; 64Kb fastram buffer
 	move.l	#$5f465242,d0			; '_FRB'
 	bsr 	CK_WriteJar			; write cookie
+
+	move.l	(sp)+,d0
+	move.l	#TTRL_MEMBOTTOM,d1	
+	add.l	d0,d1				; d1 = memtop
+	move.l	d1,$5a4.w			; write fastram top
+	move.l	#TTRL_FASTRAMMAGIC,$5a8.w	; write fastram magic
 	rts
+.fail:	addq.l	#4,sp
+	moveq.l	#0,d0
+	rts
+
