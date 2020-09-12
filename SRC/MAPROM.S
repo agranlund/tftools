@@ -13,6 +13,10 @@
 ;
 ; Version history:
 ;
+; 1.6	Bugfix. ROM area was not remapped properly in v1.5
+;
+; 1.5:	Limit to 64MB TT-RAM (temporary fix for TF536)
+;
 ; 1.4:	Added support for TOS at $FC0000 (KAOS 1.4)
 ;	Added support for TOS without maddalt/mxalloc (KAOS 1.4)
 ;	Remap low ram to tt-ram (4kb or 32Kb depending on TOS)
@@ -46,6 +50,10 @@
 COOKIE_PMMU	EQU	$504d4d55
 OPT_DEBUG	SET	0		; debug mode + symbols
 
+OPT_ONLY_RAM	SET	0		; no mmu setup
+OPT_RELO_RAM	SET	1		; map lowram
+OPT_RELO_ROM	SET	1		; map rom
+
 FLAG_TTRAM	EQU	1
 FLAG_BLITTER	EQU	2
 FLAG_MMU	EQU	4
@@ -76,8 +84,12 @@ gRamInstalled		ds.l	1
 ;--------------------------------------------------------------
 section data
 ;--------------------------------------------------------------
-sVersion		dc.b	13,10,$1b,'p',"Maprom v1.4 active",$1b,'q',13,10,0
-
+	IFEQ OPT_ONLY_RAM
+sVersion		dc.b	13,10,$1b,'p',"Maprom v1.6 active",$1b,'q',13,10,0
+	ENDC
+	IFNE OPT_ONLY_RAM
+sVersion		dc.b	13,10,$1b,'p',"Fastram v1.6 active",$1b,'q',13,10,0
+	ENDC
 
 ;--------------------------------------------------------------
 section text
@@ -118,7 +130,10 @@ MainSU:
 .fastramOK:
 	move.l	d0,gRamInstalled
 	or.w	#FLAG_TTRAM,gResultFlags
-
+	
+	IFNE	OPT_ONLY_RAM
+	bra	MainSUDone
+	ENDC
 
 	;----------------------------------------------
 	; get system config
@@ -168,14 +183,22 @@ MainSU:
 	;----------------------------------------------
 	; allocate ram for rom + mmu tables
 	;----------------------------------------------
+	move.l	#0,d4
+	IFNE 	OPT_RELO_RAM
+	move.l	#$1000,d4			; 0Kb low ram
+	cmp.l	#'ETOS',$2c(a0)			; check if EmuTOS
+	beq	.ramSizeOK
 	move.l	#$1000,d4			; 4Kb low ram
 	cmp.w	#$206,d2			; check if TOS2.06
 	bne	.ramSizeOK
-	cmp.l	#'ETOS',$2c(a0)			; check if EmuTOS
-	beq	.ramSizeOK
 	move.l	#$8000,d4			; 32Kb low ram
 .ramSizeOK:
+	ENDC
 	move.w	d4,gMapRamSize
+
+	IFEQ	OPT_RELO_ROM
+	move.l	#0,d3
+	ENDC
 
 	move.l	#$8000,d0			; 32Kb for alignment
 	add.l	#$1000,d0			;  4Kb for tables
@@ -194,7 +217,6 @@ MainSU:
 	add.l	#256,a5				; a5 = memory for extra tables
 
 
-
 	;----------------------------------------------
 	; prepare default mmu table at address d0
 	;----------------------------------------------
@@ -211,23 +233,24 @@ MainSU:
 	;----------------------------------------------
 	; map rom to fastram
 	;----------------------------------------------
+	IFNE	OPT_RELO_ROM
 	bsr	Relocate_Rom
 	tst.w	d0
 	beq	.reloRomDone
 	or.w	#FLAG_RELO_ROM,gResultFlags
 .reloRomDone:
-
-
+	ENDC
 
 	;----------------------------------------------
 	; map lowram to fastram
 	;----------------------------------------------
+	IFNE OPT_RELO_RAM
 	bsr	Relocate_Ram
 	tst.w	d0
 	beq	.reloRamDone
 	or.w	#FLAG_RELO_RAM,gResultFlags
 .reloRamDone:
-
+	ENDC
 
 	;----------------------------------------------
 	; activate new mmu tables with 4k pagesize
@@ -236,6 +259,7 @@ MainSU:
 	dc.l	$f0394000,gMMU030_TC		; pmove addr,tc	
 	dc.l	$f0002400			; pflusha	
 
+	bsr	CPU_CacheClear
 
 MainSUDone:
 	rts
@@ -284,6 +308,7 @@ Relocate_Rom:
 	add.l	d0,a2				; a2 = TID table + offset
 	move.l	d4,d5
 	or.l	#5,d5				; d5 = relocated addr, PAGE, WRITE_PROTECT
+	;or.l	#$45,d5				; d5 = relocated addr, PAGE, WRITE_PROTECT
 .loop2:	move.l	d5,(a2)+
 	add.l	#$1000,d5
 	subq.l	#1,d2

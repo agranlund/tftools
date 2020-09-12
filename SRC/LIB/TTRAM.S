@@ -15,7 +15,7 @@
 ; Anders Granlund, 2019
 ;--------------------------------------------------------------
 TTRL_MEMBOTTOM		EQU	$01000000
-TTRL_MEMMAXSIZE		EQU	256
+TTRL_MEMMAXSIZE		EQU	64
 TTRL_FASTRAMMAGIC	EQU	$1357bd13
 TTRL_FASTRAMCOOKIE	EQU	$5f465242
 
