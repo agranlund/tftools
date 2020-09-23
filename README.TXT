@@ -1,7 +1,7 @@
 ----------------------------------------------------------------------------
 TFTOOLS
 
-Atari utilities for TerribleFire TF534 accelerator card.
+Atari utilities for TerribleFire TF534/TF536 accelerator cards.
 
 They will probably also work on other accelerators as long as FastRAM is
 located in TT-RAM space (0x01000000) and the CPU is a 68030 with MMU.
@@ -32,6 +32,13 @@ Stick in in your AUTO folder, preferably as the very first item, and you
 will have a faster TOS experience and the ability for applications to
 run from FastRAM, regardless if you are using EmuTOS or TOS 2.06
 
+----------------------------------------------------------------------------
+FASTRAM.PRG
+----------------------------------------------------------------------------
+Detects and registers Fastram with the OS.
+Creates the DMA Fastram buffer and cookie.
+This one is useful as an alternative to maprom.prg if you only want to
+enable fastram without any of the extras that maprom provides.
 
 
 ----------------------------------------------------------------------------

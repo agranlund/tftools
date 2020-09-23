@@ -15,7 +15,7 @@
 ; Anders Granlund, 2019
 ;--------------------------------------------------------------
 TTRL_MEMBOTTOM		EQU	$01000000
-TTRL_MEMMAXSIZE		EQU	64
+TTRL_MEMMAXSIZE		EQU	128
 TTRL_FASTRAMMAGIC	EQU	$1357bd13
 TTRL_FASTRAMCOOKIE	EQU	$5f465242
 
@@ -88,7 +88,16 @@ TTRAM_Detect:
 	move.l	#TTRL_MEMBOTTOM,gTTRL_RamTop
 	move.w	#TTRL_MEMMAXSIZE,d3
 .loop:	movea.l	(gTTRL_RamTop),a2
-	move.l	(a2),d0				; read test
+	move.l	(a2),d4				; bus error test
+
+	add.l	#1234,d4			; write/readback test
+	move.l	d4,(a2)
+	dc.b	$4e,$7a,$00,$02			; get cache register
+	or.l	#$808,d0			; clear cache
+	dc.b	$4e,$7b,$00,$02			; set cache register	
+	cmp.l	(a2),d4
+	bne	.done
+
 	add.l	#$00100000,gTTRL_RamTop		; check 1MB intervals
 	sub.w	#1,d3
 	tst.w	d3

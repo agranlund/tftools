@@ -12,6 +12,7 @@
 ;
 ; Version history:
 ;
+; 1.1:	detect alternate nvdi filenames
 ; 1.0:	initial release.
 ;
 ; Anders Granlund, 2019
@@ -40,10 +41,10 @@ OPT_DEBUG	SET	0		; debug mode + symbols
 ;--------------------------------------------------------------
 section data
 ;--------------------------------------------------------------
-sVersion		dc.b	13,10,$1b,'p',"BlitterFix v1.0 active",$1b,'q',13,10,0
+sVersion		dc.b	13,10,$1b,'p',"BlitterFix v1.1 active",$1b,'q',13,10,0
 
-sPRG_NVDI:		dc.b  "\AUTO\NVDI.PRG",0
-sPRG_WARP9:		dc.b  "\AUTO\WARP9_ST.PRG",0
+sPRG_NVDI:		dc.b  "\AUTO\NVDI",0
+sPRG_WARP9:		dc.b  "\AUTO\WARP9",0
 sBlitOffPrgs:		dc.l sPRG_NVDI,sPRG_WARP9,0
 
 
@@ -214,6 +215,9 @@ _Done:
 	move.l	#0,d1
 	bsr 	CK_WriteJar
 	move.b	#1,gKeepResident		; keep resident
+
+	bsr	CPU_CacheClear
+
 	rts
 
 ;--------------------------------------------------------------
@@ -525,11 +529,13 @@ CompareStrings:
 	move.l	a1,-(sp)
 _cslp:	move.b	(a0)+,d0
 	move.b	(a1)+,d1
+	cmp.b	#0,d1		; compare up to length of a1
+	beq	_cseq
 	cmp.b	d0,d1
 	bne	_csne
 	cmp.b	#0,d0
 	bne	_cslp
-	clr.w	d0
+_cseq:	clr.w	d0
 	bra	_csdn
 _csne:	move.w	#1,d0
 _csdn:	move.l	(sp)+,a1

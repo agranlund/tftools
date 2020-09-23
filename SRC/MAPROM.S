@@ -13,6 +13,8 @@
 ;
 ; Version history:
 ;
+; 1.7	Support 128MB TT-RAM
+;
 ; 1.6	Bugfix. ROM area was not remapped properly in v1.5
 ;
 ; 1.5:	Limit to 64MB TT-RAM (temporary fix for TF536)
@@ -85,10 +87,10 @@ gRamInstalled		ds.l	1
 section data
 ;--------------------------------------------------------------
 	IFEQ OPT_ONLY_RAM
-sVersion		dc.b	13,10,$1b,'p',"Maprom v1.6 active",$1b,'q',13,10,0
+sVersion		dc.b	13,10,$1b,'p',"Maprom v1.7 active",$1b,'q',13,10,0
 	ENDC
 	IFNE OPT_ONLY_RAM
-sVersion		dc.b	13,10,$1b,'p',"Fastram v1.6 active",$1b,'q',13,10,0
+sVersion		dc.b	13,10,$1b,'p',"Fastram v1.7 active",$1b,'q',13,10,0
 	ENDC
 
 ;--------------------------------------------------------------
