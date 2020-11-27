@@ -47,7 +47,6 @@
 	include "LIB\COOKIE.S"
 	include "LIB\TTRAM.S"
 
-
 ;--------------------------------------------------------------
 COOKIE_PMMU	EQU	$504d4d55
 OPT_DEBUG	SET	0		; debug mode + symbols
