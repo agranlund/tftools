@@ -13,7 +13,7 @@ Parts of these programs are derived from work done by the EmuTOS team.
 Parts of the these programs are using COOKIE.S by Arnd Beissner
 
 Sourcecode compiles with Devpac 3
-Anders Granlund, 2019
+Anders Granlund, 2020
 ----------------------------------------------------------------------------
 
 
