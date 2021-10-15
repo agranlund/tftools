@@ -124,10 +124,10 @@ MMU030_Install:
         PMMU030_TABLE	PMMU030_TABLE_TIC	; 0xf0000000-0xffffffff -> table tic
 
 	; PMMU030_TABLE_TIC: 0x00000000-0x00ffffffff
-        PMMU030_PAGE	$00000000		; 0xff000000-0xffefffff -> 0x00000000-0x00efffff, allow cache
-        PMMU030_PAGE	$00100000
-        PMMU030_PAGE	$00200000
-        PMMU030_PAGE	$00300000
+        PMMU030_PAGE_CI	$00000000		; cache inhibit st-ram
+        PMMU030_PAGE_CI	$00100000		; cache inhibit st-ram
+        PMMU030_PAGE_CI	$00200000		; cache inhibit st-ram
+        PMMU030_PAGE_CI	$00300000		; cache inhibit st-ram
         PMMU030_PAGE	$00400000
         PMMU030_PAGE	$00500000
         PMMU030_PAGE	$00600000
@@ -136,10 +136,10 @@ MMU030_Install:
         PMMU030_PAGE	$00900000
         PMMU030_PAGE	$00a00000
         PMMU030_PAGE	$00b00000
-        PMMU030_PAGE	$00c00000
-        PMMU030_PAGE	$00d00000
+        PMMU030_PAGE_CI	$00c00000		; cache inhibit usual gfxcard range
+        PMMU030_PAGE_CI	$00d00000		; cache inhibit usual gfxcard range
         PMMU030_PAGE	$00e00000
-        PMMU030_PAGE_CI	$00f00000		; 0xfff00000-0xffffffff -> 0x00f00000-0x00ffffff, cache inhibit
+        PMMU030_PAGE_CI	$00f00000		; cache inhibit usual hardware regs
 
 	move.l	d0,gMMU030_CRP+4
 	move.l	#$80000002,gMMU030_CRP

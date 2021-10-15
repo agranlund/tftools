@@ -13,6 +13,12 @@
 ;
 ; Version history:
 ;
+; 1.8	Fixed TT-RAM detect after Atari TOS warm reset
+;	Cache inhibit relocated low ST-RAM
+;	Cache inhibit ST-RAM ($00000000-$003FFFFF)
+;	Cache inhibit Alt-RAM ($00C00000-$00DFFFFF)
+;	(usual gfxcard range)
+;
 ; 1.7	Support 128MB TT-RAM
 ;
 ; 1.6	Bugfix. ROM area was not remapped properly in v1.5
@@ -34,12 +40,7 @@
 ;
 ; 1.0:	initial release. Remaps $E00000-$EFFFFF to TT-RAM 
 ;
-; Anders Granlund, 2019
-;
-;
-; TODO:
-;  	Atari TOS cannot read floppy if cache is enabled. Disable cache.
-;
+; Anders Granlund, 2020
 ;--------------------------------------------------------------------------
 	include "LIB\SYS.S"
 	include "LIB\CPU.S"
@@ -82,15 +83,14 @@ gMapRamSize		ds.w	1
 gRamInstalled		ds.l	1
 
 
-
 ;--------------------------------------------------------------
 section data
 ;--------------------------------------------------------------
 	IFEQ OPT_ONLY_RAM
-sVersion		dc.b	13,10,$1b,'p',"Maprom v1.7 active",$1b,'q',13,10,0
+sVersion		dc.b	13,10,$1b,'p',"Maprom v1.8 active",$1b,'q',13,10,0
 	ENDC
 	IFNE OPT_ONLY_RAM
-sVersion		dc.b	13,10,$1b,'p',"Fastram v1.7 active",$1b,'q',13,10,0
+sVersion		dc.b	13,10,$1b,'p',"Fastram v1.8 active",$1b,'q',13,10,0
 	ENDC
 
 ;--------------------------------------------------------------
@@ -124,7 +124,26 @@ MainSU:
 	;----------------------------------------------
 	bsr	TTRAM_GetInstalled		; tt-ram already installed?
 	tst.l	d0
-	bne	.fastramOK
+	beq	.fastramDetect
+
+	; verify that we can allocate and if not redetect and install it.
+	; This is necessary for when Atari TOS skips the memory test on warm reset.
+	move.l	d0,d3
+	move.w	#1,-(sp)			; alt-ram only
+	move.l	#32,-(sp)			; 32 bytes
+	move.w	#68,-(sp)			; Mxalloc
+	trap	#1
+	addq.l	#8,sp	
+	tst.l	d0				; fail = redetect
+	beq	.fastramDetect
+	move.l	d0,-(sp)
+	move.w	#73,-(sp)			; Mfree
+	trap	#1
+	addq.l	#6,sp		
+	move.l	d3,d0
+	bra	.fastramOK
+
+.fastramDetect
 	bsr	TTRAM_Detect			; detect tt-ram
 	tst.l	d0
 	beq	MainSUDone
@@ -247,12 +266,15 @@ MainSU:
 	; map lowram to fastram
 	;----------------------------------------------
 	IFNE OPT_RELO_RAM
+	tst.w	gMapRamSize
+	beq	.reloRamDone
 	bsr	Relocate_Ram
 	tst.w	d0
 	beq	.reloRamDone
 	or.w	#FLAG_RELO_RAM,gResultFlags
 .reloRamDone:
 	ENDC
+
 
 	;----------------------------------------------
 	; activate new mmu tables with 4k pagesize
@@ -310,7 +332,6 @@ Relocate_Rom:
 	add.l	d0,a2				; a2 = TID table + offset
 	move.l	d4,d5
 	or.l	#5,d5				; d5 = relocated addr, PAGE, WRITE_PROTECT
-	;or.l	#$45,d5				; d5 = relocated addr, PAGE, WRITE_PROTECT
 .loop2:	move.l	d5,(a2)+
 	add.l	#$1000,d5
 	subq.l	#1,d2
@@ -336,14 +357,10 @@ Relocate_Ram:
 ; input: a4 = memory for data (incremented)
 ;	 a5 = memory for table (incremented)
 ;	 a6 = MMU table 
-;
-; TODO: detect and avoid page with _dskbuf
-;	limit to one page for emutos
-;
 ;--------------------------------------------------------------
 	move.l	a4,d0
-	or.l	#1,d0				; d0 = relocate | PAGE
-	move.l	#$0001,d1			; d1 = no relocate | PAGE
+	or.l	#$41,d0				; d0 = relocate | PAGE | CACHE_INHIBIT
+	move.l	#$41,d1				; d1 = no relocate | PAGE | CACHE_INHIBIT
 	move.l	a5,d4				; d4 = TID table
 
 	move.w	gMapRamSize,d3
@@ -436,4 +453,3 @@ AllocateFastRam:
 	trap	#1
 	addq.l	#8,sp	
 	rts
-
