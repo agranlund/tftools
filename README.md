@@ -1,7 +1,7 @@
 
-[MapROM]: /program/MapROM.md
-[FastRAM]: /program/FastRAM.md
-[BlitFix]: /program/BlitFix.md
+[MapROM]: Programs/MapROM.md
+[FastRAM]: Programs/FastRAM.md
+[BlitFix]: Programs/BlitFix.md
 
 
 
