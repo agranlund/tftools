@@ -1,4 +1,4 @@
-[MapROM]: /MapROM.md
+[MapROM]: MapROM.md
 
 
 # BlitFix
