@@ -55,15 +55,15 @@ OPT_DEBUG	SET	0		; debug mode + symbols
 
     ifnd OPT_ONLY_RAM
 OPT_ONLY_RAM	SET	0		; no mmu setup
-    endif
+    endc
 
     ifnd OPT_RELO_RAM
 OPT_RELO_RAM	SET	1		; map lowram
-    endif
+    endc
     
     ifnd OPT_RELO_ROM
 OPT_RELO_ROM	SET	1		; map rom
-    endif
+    endc
 
 FLAG_TTRAM	EQU	1
 FLAG_BLITTER	EQU	2
