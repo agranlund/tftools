@@ -53,9 +53,17 @@
 COOKIE_PMMU	EQU	$504d4d55
 OPT_DEBUG	SET	0		; debug mode + symbols
 
+    ifnd OPT_ONLY_RAM
 OPT_ONLY_RAM	SET	0		; no mmu setup
+    endif
+
+    ifnd OPT_RELO_RAM
 OPT_RELO_RAM	SET	1		; map lowram
+    endif
+    
+    ifnd OPT_RELO_ROM
 OPT_RELO_ROM	SET	1		; map rom
+    endif
 
 FLAG_TTRAM	EQU	1
 FLAG_BLITTER	EQU	2
@@ -71,7 +79,7 @@ FLAG_RELO_RAM	EQU	16
 
 
 ;--------------------------------------------------------------
-section bss
+    section bss
 ;--------------------------------------------------------------
 gResultFlags		ds.w	1
 gFastRamSize		ds.l	1
@@ -84,7 +92,7 @@ gRamInstalled		ds.l	1
 
 
 ;--------------------------------------------------------------
-section data
+    section data
 ;--------------------------------------------------------------
 	IFEQ OPT_ONLY_RAM
 sVersion		dc.b	13,10,$1b,'p',"Maprom v1.8 active",$1b,'q',13,10,0
@@ -94,7 +102,7 @@ sVersion		dc.b	13,10,$1b,'p',"Fastram v1.8 active",$1b,'q',13,10,0
 	ENDC
 
 ;--------------------------------------------------------------
-section text
+    section text
 ;--------------------------------------------------------------
 
 
@@ -347,7 +355,7 @@ Relocate_Rom:
 	add.l	d0,a2				; a2 = TIA entry
 	or.l	#2,d1				; d1 = pointer to TID table
 	move.l	d1,(a2)
-	moveq.w	#1,d0
+	moveq	#1,d0
 .done:	rts
 
 

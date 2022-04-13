@@ -19,13 +19,13 @@ TTRL_FASTRAMMAGIC	EQU	$1357bd13
 TTRL_FASTRAMCOOKIE	EQU	$5f465242
 
 ;--------------------------------------------------------------
-section bss
+    section bss
 ;--------------------------------------------------------------
 gTTRL_RamTop		ds.l 1		; fastram top
 gTTRL_BushandlerOld	ds.l 1		; old bus error handler
 
 ;--------------------------------------------------------------
-section text
+    section text
 ;--------------------------------------------------------------
 
 

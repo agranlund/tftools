@@ -1,6 +1,6 @@
 VASM=vasmm68k_mot
 
-all: maprom fastram
+all: maprom fastram blitfix
 
 clean:
 	rm -f *.o fastram.prg maprom.prg
