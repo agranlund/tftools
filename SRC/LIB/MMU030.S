@@ -16,15 +16,15 @@
 ;--------------------------------------------------------------
 
 ;--------------------------------------------------------------
-section bss
+	section bss
 ;--------------------------------------------------------------
-gMMU030_CRP	ds.l	2
-gMMU030_TC	ds.l	1
+gMMU030_CRP		ds.l	2
+gMMU030_TC		ds.l	1
 gMMU030_TTR0	ds.l	1
 gMMU030_TTR1	ds.l	1
 
 ;--------------------------------------------------------------
-section text
+	section text
 ;--------------------------------------------------------------
 
 PMMU030_TABLE_TIA	equ $00
@@ -54,16 +54,17 @@ MMU030_Install:
 ; return: d0 = tia table location
 ;--------------------------------------------------------------
 	tst.l	d0
-	bne	.ramOK
+	bne		.ramOK
 	move.w	#3,-(sp)			; prefer tt-ram
 	move.l	#$200,-(sp)			; 256 + 256 bytes for allignment
 	move.w	#68,-(sp)			; Mxalloc
 	trap	#1
 	addq.l	#8,sp
 	tst.l	d0
-	bne	.ramOK
+	bne		.ramOK
 	rts
-.ramOK:	add.l	#$FF,d0
+.ramOK:
+	add.l	#$FF,d0
 	and.l	#-$100,d0
 	move.l	a0,-(sp)
 	move.l	d1,-(sp)
@@ -124,10 +125,19 @@ MMU030_Install:
         PMMU030_TABLE	PMMU030_TABLE_TIC	; 0xf0000000-0xffffffff -> table tic
 
 	; PMMU030_TABLE_TIC: 0x00000000-0x00ffffffff
-        PMMU030_PAGE_CI	$00000000		; cache inhibit st-ram
-        PMMU030_PAGE_CI	$00100000		; cache inhibit st-ram
-        PMMU030_PAGE_CI	$00200000		; cache inhibit st-ram
-        PMMU030_PAGE_CI	$00300000		; cache inhibit st-ram
+
+		IFEQ OPT_STRAM_CI
+	        PMMU030_PAGE	$00000000
+	        PMMU030_PAGE	$00100000
+	        PMMU030_PAGE	$00200000
+	        PMMU030_PAGE	$00300000
+		ENDC
+		IFNE OPT_STRAM_CI
+	        PMMU030_PAGE_CI	$00000000		; cache inhibit st-ram
+	        PMMU030_PAGE_CI	$00100000		; cache inhibit st-ram
+	        PMMU030_PAGE_CI	$00200000		; cache inhibit st-ram
+	        PMMU030_PAGE_CI	$00300000		; cache inhibit st-ram
+		ENDC
         PMMU030_PAGE	$00400000
         PMMU030_PAGE	$00500000
         PMMU030_PAGE	$00600000

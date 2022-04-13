@@ -1,0 +1,28 @@
+#Makefile
+VASM=vasmm68k_mot
+TARGETS=BLITFIX.PRG FASTRAM.PRG MAPROM.PRG MAPROM_C.PRG
+FLAGS=-Ftos -devpac -tos-flags=0 -monst
+
+all: $(TARGETS)
+
+clean:
+	rm -f *.o $(TARGETS)
+
+dist:
+	cp *.PRG ../
+
+BLITFIX.PRG:
+	rm -f *.o
+	$(VASM) $(FLAGS) BLITFIX.S -o $@
+
+FASTRAM.PRG:
+	rm -f *.o
+	$(VASM) $(FLAGS) -DOPT_MMU=0 -DOPT_STRAM_CI=1 -DOPT_RELO_ROM=0 -DOPT_RELO_RAM=0 MAPROM.S -o $@
+
+MAPROM.PRG:
+	rm -f *.o
+	$(VASM) $(FLAGS) -DOPT_MMU=1 -DOPT_STRAM_CI=1 -DOPT_RELO_ROM=1 -DOPT_RELO_RAM=1 MAPROM.S -o $@
+
+MAPROM_C.PRG:
+	rm -f *.o
+	$(VASM) $(FLAGS) -DOPT_MMU=1 -DOPT_STRAM_CI=0 -DOPT_RELO_ROM=1 -DOPT_RELO_RAM=1 MAPROM.S -o $@
