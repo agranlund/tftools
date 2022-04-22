@@ -13,6 +13,9 @@
 ;
 ; Version history:
 ;
+; 2.0	Relocate 4k instead of 32k on TOS206 just like
+;		how it's done for all other version
+;
 ; 1.9	Added maprom_c.prg which allows L1 cache for ST-RAM
 ;
 ; 1.8	Fixed TT-RAM detect after Atari TOS warm reset
@@ -85,11 +88,11 @@ gRamInstalled	ds.l	1
 	section data
 ;--------------------------------------------------------------
 	IFNE OPT_MMU
-sVersion		dc.b	13,10,$1b,'p',"Maprom v1.9 active",$1b,'q',13,10,0
+sVersion		dc.b	13,10,$1b,'p',"Maprom v2.0 active",$1b,'q',13,10,0
 	ENDC
 
 	IFEQ OPT_MMU
-sVersion		dc.b	13,10,$1b,'p',"Fastram v1.9 active",$1b,'q',13,10,0
+sVersion		dc.b	13,10,$1b,'p',"Fastram v2.0 active",$1b,'q',13,10,0
 	ENDC
 
 ;--------------------------------------------------------------
@@ -205,13 +208,13 @@ MainSU:
 	;----------------------------------------------
 	move.l	#0,d4
 	IFNE 	OPT_RELO_RAM
-	move.l	#$1000,d4			; 0Kb low ram
-	cmp.l	#'ETOS',$2c(a0)		; check if EmuTOS
+	move.l	#$1000,d4			; EmuTOS = 4Kb
+	cmp.l	#'ETOS',$2c(a0)
 	beq		.ramSizeOK
-	move.l	#$1000,d4			; 4Kb low ram
-	cmp.w	#$206,d2			; check if TOS2.06
+	move.l	#$1000,d4			; Default = 4Kb
+	cmp.w	#$206,d2
 	bne		.ramSizeOK
-	move.l	#$8000,d4			; 32Kb low ram
+	move.l	#$1000,d4			; TOS2.06 = 4Kb
 .ramSizeOK:
 	ENDC
 	move.w	d4,gMapRamSize
@@ -385,29 +388,29 @@ Relocate_Ram:
 	subq.w	#1,d3
 	bne		.copy
 
-	move.l	$4c6,d3	
+	move.l	$4c6,d3				; get pointer to _dskbuf from $4c6
 	lsr.l	#8,d3
-	lsr.l	#4,d3
+	lsr.l	#4,d3				; d3 is now the 4k page it belongs to
 	move.w	#1,d2
-	lsl.w	d3,d2
-	not.w	d2			
+	lsl.w	d3,d2				; set the bit corresponding to the page
+	not.w	d2					; invert bitmask
 
 	move.w	#$7FFF,d6			; d6 = page mask
 	and.w	d2,d6				; ignore _dskbuf page
 
 	move.w	d5,d3				; relocate pages
 .loop2:
-	btst	#0,d6
-	beq		.skip
-	move.l	d0,(a5)+
+	btst	#0,d6				; check page mask
+	beq		.skip				; don't relocate if bit is 0
+	move.l	d0,(a5)+			; set page = new address
 	bra		.loop3
 .skip
-	move.l	d1,(a5)+
+	move.l	d1,(a5)+			; set page = original address
 .loop3:
-	lsr.w	#1,d6
-	add.l	#$1000,d0
-	add.l	#$1000,d1
-	subq.w	#1,d3
+	lsr.w	#1,d6				; adjust page mask
+	add.l	#$1000,d0			; step 4kb dst address
+	add.l	#$1000,d1			; step 4kb src address
+	subq.w	#1,d3				
 	bne		.loop2
 
 .last:
