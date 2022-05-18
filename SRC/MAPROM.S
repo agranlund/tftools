@@ -13,6 +13,8 @@
 ;
 ; Version history:
 ;
+; 2.1	Fixed floppy issues
+;
 ; 2.0	Relocate 4k instead of 32k on TOS206 just like
 ;		how it's done for all other version
 ;
@@ -56,6 +58,7 @@
 
 ;--------------------------------------------------------------
 COOKIE_PMMU		EQU	$504d4d55
+COOKIE_FRB		EQU $5f465242
 OPT_DEBUG		SET	0		; debug mode + symbols
 
 FLAG_TTRAM		EQU	1
@@ -88,11 +91,11 @@ gRamInstalled	ds.l	1
 	section data
 ;--------------------------------------------------------------
 	IFNE OPT_MMU
-sVersion		dc.b	13,10,$1b,'p',"Maprom v2.0 active",$1b,'q',13,10,0
+sVersion		dc.b	13,10,$1b,'p',"Maprom v2.1 active",$1b,'q',13,10,0
 	ENDC
 
 	IFEQ OPT_MMU
-sVersion		dc.b	13,10,$1b,'p',"Fastram v2.0 active",$1b,'q',13,10,0
+sVersion		dc.b	13,10,$1b,'p',"Fastram v2.1 active",$1b,'q',13,10,0
 	ENDC
 
 ;--------------------------------------------------------------
@@ -112,6 +115,7 @@ Main
 	beq		.exit
 	lea		sVersion(pc),a0
 	bsr		SYS_Print	
+	;bsr		SYS_Waitkey
 	bra		SYS_QuitKeepResident
 .exit	
 	rts
@@ -175,6 +179,7 @@ MainSU:
 	ENDC
 
 
+
 	;----------------------------------------------
 	; check rom size and start address
 	; a3 = rom address
@@ -208,13 +213,13 @@ MainSU:
 	;----------------------------------------------
 	move.l	#0,d4
 	IFNE 	OPT_RELO_RAM
-	move.l	#$1000,d4			; EmuTOS = 4Kb
+	move.l	#$800,d4			; EmuTOS = 2Kb
 	cmp.l	#'ETOS',$2c(a0)
 	beq		.ramSizeOK
-	move.l	#$1000,d4			; Default = 4Kb
+	move.l	#$800,d4			; Default = 2Kb
 	cmp.w	#$206,d2
 	bne		.ramSizeOK
-	move.l	#$1000,d4			; TOS2.06 = 4Kb
+	move.l	#$800,d4			; TOS2.06 = 8Kb
 .ramSizeOK:
 	ENDC
 	move.w	d4,gMapRamSize
@@ -224,7 +229,7 @@ MainSU:
 	ENDC
 
 	move.l	#$8000,d0			; 32Kb for alignment
-	add.l	#$1000,d0			;  4Kb for tables
+	add.l	#$2000,d0			;  8Kb for tables
 	add.l	d3,d0				; rom size
 	add.l	d4,d0				; ram size
 	bsr		AllocateFastRam
@@ -240,6 +245,11 @@ MainSU:
 	add.l	#256,a5				; a5 = memory for extra tables
 
 
+	; disable mmu
+	move.l	#$0,gMMU030_TC
+	dc.l	$f0394000,gMMU030_TC
+
+
 	;----------------------------------------------
 	; prepare default mmu table at address d0
 	;----------------------------------------------
@@ -248,10 +258,19 @@ MainSU:
 	beq		MainSUDone
 	or.w	#FLAG_MMU,gResultFlags
 	move.l	#COOKIE_PMMU,d0			; Write 'PMMU' cookie
-	move.l	#0,d1
+	move.l	a6,d1
 	bsr 	CK_WriteJar
 
+	IFEQ	OPT_RELO_ROM+OPT_RELO_RAM
+	rts
+	ENDC
 
+
+	; disable mmu
+	move.l	#0,gMMU030_TC
+	dc.l	$f0394000,gMMU030_TC
+	dc.l	$f0002400					; pflusha
+	bsr		CPU_CacheClear
 
 	;----------------------------------------------
 	; map rom to fastram
@@ -267,7 +286,7 @@ MainSU:
 	;----------------------------------------------
 	; map lowram to fastram
 	;----------------------------------------------
-	IFNE OPT_RELO_RAM
+	IFNE 	OPT_RELO_RAM
 	tst.w	gMapRamSize
 	beq		.reloRamDone
 	bsr		Relocate_Ram
@@ -277,13 +296,13 @@ MainSU:
 .reloRamDone:
 	ENDC
 
-
 	;----------------------------------------------
 	; activate new mmu tables with 4k pagesize
+
 	;----------------------------------------------
-	move.l	#$80c04448,gMMU030_TC		; enable, 4k pages, IS=0, TIA=4, TIB=4, TIC=4, TID=8
+	move.l	#$80b04449,gMMU030_TC		; enable, 2k pages, IS=0, TIA=4, TIB=4, TIC=4, TID=8
 	dc.l	$f0394000,gMMU030_TC		; pmove addr,tc	
-	dc.l	$f0002400					; pflusha	
+	dc.l	$f0002400					; pflusha
 	bsr		CPU_CacheClear
 
 MainSUDone:
@@ -304,8 +323,8 @@ Relocate_Rom:
 	beq		.done
 	move.l	a4,d4				; d4 = dst address
 	move.l	d3,d2
-	swap	d2
-	lsl.l	#4,d2				; d2 = num 4k pages
+	lsr.l	#8,d2
+	lsr.l	#3,d2				; d2 = num 2k pages
 	lsr.l	#2,d3
 	move.l	a3,-(sp)
 .copy:
@@ -318,26 +337,26 @@ Relocate_Rom:
 	move.l	a5,d1				; d1 = TID table
 	move.l	a3,d5
 	and.l	#$f00000,d5
-	or.l	#$41,d5				; d5 = original addr, PAGE, CACHE_INHIBIT
-	move.l	#256,d3
+	or.l	#$41,d5				; d5 = original addr, PAGE, CACHE-INHIBIT (actually not needed unless TOS1)
+	move.l	#512,d3
 .loop1:	
 	move.l	d5,(a5)+
-	add.l	#$1000,d5
+	add.l	#$800,d5
 	subq.l	#1,d3
 	bne		.loop1
 
 	; write relocation entries to TID table
 	move.l	a3,d0
 	and.l	#$0FFFFF,d0
-	lsl.l	#6,d0
-	swap	d0
+	lsr.l	#8,d0
+	lsr.l	#1,d0				; d0 = page num * 4 (tid offset)
 	move.l	d1,a2
 	add.l	d0,a2				; a2 = TID table + offset
 	move.l	d4,d5
 	or.l	#5,d5				; d5 = relocated addr, PAGE, WRITE_PROTECT
 .loop2:
 	move.l	d5,(a2)+
-	add.l	#$1000,d5
+	add.l	#$800,d5
 	subq.l	#1,d2
 	bne		.loop2
 
@@ -351,7 +370,7 @@ Relocate_Rom:
 	add.l	d0,a2				; a2 = TIA entry
 	or.l	#2,d1				; d1 = pointer to TID table
 	move.l	d1,(a2)
-	moveq	#1,d0
+	move.w	#1,d0
 .done:
 	rts
 
@@ -376,9 +395,9 @@ Relocate_Ram:
 
 	move.w	gMapRamSize,d3
 	lsr.w	#2,d3
-	move.w	d3,d5
-	lsr.w	#8,d5
-	lsr.w	#2,d5				; d5 = num pages
+	move.w	d3,d5				; d5 = ramsize / 4
+	lsr.w	#8,d5				; d5 = ramsize / 1024
+	lsr.w	#1,d5				; d5 = ramsize / 2048
 	tst.w	d5
 	beq		.last
 
@@ -390,8 +409,8 @@ Relocate_Ram:
 
 	move.l	$4c6,d3				; get pointer to _dskbuf from $4c6
 	lsr.l	#8,d3
-	lsr.l	#4,d3				; d3 is now the 4k page it belongs to
-	move.w	#1,d2
+	lsr.l	#3,d3				; d3 is now the 2k page it belongs to
+	move.w	#3,d2				; (include next page too)
 	lsl.w	d3,d2				; set the bit corresponding to the page
 	not.w	d2					; invert bitmask
 
@@ -408,22 +427,40 @@ Relocate_Ram:
 	move.l	d1,(a5)+			; set page = original address
 .loop3:
 	lsr.w	#1,d6				; adjust page mask
-	add.l	#$1000,d0			; step 4kb dst address
-	add.l	#$1000,d1			; step 4kb src address
+	add.l	#$800,d0			; step 2kb dst address
+	add.l	#$800,d1			; step 2kb src address
 	subq.w	#1,d3				
 	bne		.loop2
 
 .last:
-	move.w	#256,d3				; remaining non-relocate pages 
+	move.w	#512,d3				; remaining non-relocate pages 
 	sub.w	d5,d3
 .loop4:
 	move.l	d1,(a5)+
-	add.l	#$1000,d1
+	add.l	#$800,d1
 	subq.w	#1,d3
 	bne		.loop4
 
+
+;	move.l	#COOKIE_FRB,d0
+;	bsr		GetCookie			; frb pointer -> d1
+;	cmp.l	#$100000,d1
+;	bcc		.skipfrb
+;	lsr.l	#8,d1
+;	lsr.l	#3,d1				; 2k page number
+;	lsl.l	#2,d1				; offset
+;	move.l	d4,a5
+;	add.l	d1,a5
+;	move.l	#17,d3				; 17 pages is enough to cover the frb
+;	move.l	#512,d3
+;.loop5:
+;	or.l	#$40,(a5)+
+;	subq.w	#1,d3
+;	bne		.loop5
+;.skipfrb
 	or.l	#$2,d4
 	move.l	d4,$c0(a6)			; write to offset 0xc0 in TIA table
+	move.w	#1,d0
 	rts
 
 
