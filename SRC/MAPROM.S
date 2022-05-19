@@ -91,11 +91,11 @@ gRamInstalled	ds.l	1
 	section data
 ;--------------------------------------------------------------
 	IFNE OPT_MMU
-sVersion		dc.b	13,10,$1b,'p',"Maprom v2.1 active",$1b,'q',13,10,0
+sVersion		dc.b	13,10,$1b,'p',"Maprom v2.2 active",$1b,'q',13,10,0
 	ENDC
 
 	IFEQ OPT_MMU
-sVersion		dc.b	13,10,$1b,'p',"Fastram v2.1 active",$1b,'q',13,10,0
+sVersion		dc.b	13,10,$1b,'p',"Fastram v2.2 active",$1b,'q',13,10,0
 	ENDC
 
 ;--------------------------------------------------------------
@@ -337,7 +337,7 @@ Relocate_Rom:
 	move.l	a5,d1				; d1 = TID table
 	move.l	a3,d5
 	and.l	#$f00000,d5
-	or.l	#$41,d5				; d5 = original addr, PAGE, CACHE-INHIBIT (actually not needed unless TOS1)
+	or.l	#$41,d5				; d5 = original addr, PAGE, CACHE-INHIBIT
 	move.l	#512,d3
 .loop1:	
 	move.l	d5,(a5)+
@@ -384,7 +384,7 @@ Relocate_Ram:
 ;--------------------------------------------------------------
 	move.l	a4,d0
 	IFEQ OPT_STRAM_CI
-		or.l	#$01,d0			; d0 = relocate | PAGE
+		or.l	#$41,d0			; d0 = relocate | PAGE | CACHE_INHIBIT
 		move.l	#$01,d1			; d1 = no relocate | PAGE
 	ENDC
 	IFNE OPT_STRAM_CI
@@ -441,26 +441,74 @@ Relocate_Ram:
 	subq.w	#1,d3
 	bne		.loop4
 
+	; _dskbuf
+	move.l	$4c6,d1				; d1 = ptr  = _dskbuf
+	move.l	#4096,d2			; d2 = 4kb (EmuTOS is using 3072kb)
+	bsr		CacheInhibitAndNoRelo
 
-;	move.l	#COOKIE_FRB,d0
-;	bsr		GetCookie			; frb pointer -> d1
-;	cmp.l	#$100000,d1
-;	bcc		.skipfrb
-;	lsr.l	#8,d1
-;	lsr.l	#3,d1				; 2k page number
-;	lsl.l	#2,d1				; offset
-;	move.l	d4,a5
-;	add.l	d1,a5
-;	move.l	#17,d3				; 17 pages is enough to cover the frb
-;	move.l	#512,d3
-;.loop5:
-;	or.l	#$40,(a5)+
-;	subq.w	#1,d3
-;	bne		.loop5
-;.skipfrb
+	; FRB
+	move.l	#COOKIE_FRB,d0
+	bsr		GetCookie			; d1 = FRB pointer
+	move.l	#$10000,d2			; d2 = 64kb
+	bsr		CacheInhibitAndNoRelo		
+	
+
+	; There is something at $6000-$6800 in EmuTOS that prevents floppy from working
+	; when st-ram cache is enabled.
+	; Ultrasatan on ACSI DMA works fine though.
+	;
+	; Since I don't know what it is, or if something similar exists on
+	; newer version of EmuTOS / TOS206 / TOS306 we will go ahead and
+	; cache-inhibit everything up until 32kb.
+	;
+	;	move.l	#$6800,d1
+	;	move.l	#$800,d2
+	;
+	move.l	#0,d1
+	add.w	gMapRamSize,d1
+	move.l	#$8000,d2
+	sub.l	d1,d2
+	bsr		CacheInhibitAndNoRelo
+
+
 	or.l	#$2,d4
 	move.l	d4,$c0(a6)			; write to offset 0xc0 in TIA table
 	move.w	#1,d0
+	rts
+
+
+;--------------------------------------------------------------
+CacheInhibitAndNoRelo:
+;	d1 = start, d2 = size
+;	destroys: d0, d3, a5
+;--------------------------------------------------------------
+	move.l	#$100000,d0
+	cmp.l	d0,d1
+	bcc		.skipci
+	move.l	d1,d3
+	add.l	d2,d3
+	add.l	#$7FF,d3
+	and.l	#$FFFFF800,d3		; d3 = end, aligned to 2k pages
+	cmp.l	d0,d3
+	bls		.startci
+	move.l	d0,d3
+.startci:
+	and.l	#$FFFFF800,d1		; d1 = start, aligned to 2k pages
+	move.l	d1,d2
+	lsr.l	#8,d2
+	lsr.l	#3,d2				; d2 = page number
+	lsl.l	#2,d2				; d2 = offset
+	move.l	d4,a5
+	add.l	d2,a5				; a5 = tid table + offset
+.loopci:
+	move.l	d1,d0
+	or.l	#$41,d0				; original address | PAGE | CACHE-INHIBIT
+	move.l	d0,(a5)+
+	;or.l	#$40,(a5)+			; cache inhibit
+	add.l	#$800,d1
+	cmp.l	d3,d1
+	bcs		.loopci
+.skipci
 	rts
 
 
