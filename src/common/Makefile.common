@@ -1,0 +1,131 @@
+CC = m68k-atari-mint-gcc
+NATIVE_GCC = gcc
+STRIPX = ../ext/stripx/stripx
+
+LIBCMINI_DIR	= ../ext/libcmini
+LIBCMINI_INC	= -I$(LIBCMINI_DIR)/include
+LIBCMINI_LIB	= -L$(LIBCMINI_DIR)/build
+#LIBCMINI_CRT	= $(LIBCMINI_DIR)/build/minicrt0.o
+LIBCMINI_CRT	= $(LIBCMINI_DIR)/build/crt0.o
+LIBCMINI_CFL	= -ffast-math -nostdlib 
+LIBCMINI_LFL	= -nodefaultlibs -nostdlib -nostartfiles -lcmini
+
+SYMFLAGS = -Wl,--traditional-format
+
+PARCP			= ../ext/parcp421/apple/parcp
+PARCP_DST		= D:
+
+ifeq ($(OUT_DIR),)
+OUT_DIR = ../..
+endif
+
+ifeq ($(OBJ_DIR),)
+OBJ_DIR = obj
+endif
+
+APP = $(OUT_DIR)/$(BIN)
+
+DOC_IN = $(DOC)
+DOC_OUT = $(OUT_DIR)/$(DOC)
+
+ifeq ($(NAME),)
+NAME = $(BIN)
+endif
+
+ifeq ($(OPT),)
+OPT = -Os
+endif
+
+TARGET_DEF = $(OPT)
+TARGET_DEF += $(DEFS)
+TARGET_DEF += -DBUILD_NAME="\"$(NAME)\"" -DBUILD_DATE="\"`date +%Y-%m-%d`\""
+TARGET_DEF += -DVER="\"$(NAME) v.`date +%Y%m%d`\""
+STRIP = $(STRIPX) -v -f $(APP)
+
+INCLUDE = $(LIBCMINI_INC) -I$(GEMLIB_DIR) -I. -I../common
+
+LDFLAGS = $(LIBCMINI_LIB) $(LIBCMINI_LFL)
+
+CXXFLAGS = \
+	$(TARGET_DEF) \
+	$(LIBCMINI_CFL) \
+	$(SYMFLAGS) \
+	-std=c99 \
+	-fomit-frame-pointer -fno-exceptions \
+	-Wall -Wno-multichar \
+	-Wl,-Map,mapfile \
+
+SFLAGS = $(TARGET_DEF) -D__ASSEMBLY__
+
+CPUFLAGS030 = -m68030
+CPUFLAGS = -m68000
+
+DISASM =
+
+SRCS =	../common/lgcc.S \
+		../common/cpu.S \
+		../common/sys.c \
+		../common/cookie.c \
+		$(SRC)
+
+## Rules
+.PHONY: clean dist
+
+all: $(APP) $(DOC_OUT) $(DOC_IN)
+
+ifneq ($(DOC),)
+$(DOC_OUT): $(DOC_IN)
+	cp $< $@
+endif	
+
+$(OBJ_DIR):
+	@[ -d obj ] || mkdir obj > /dev/null 2>&1
+	@[ -d $(OBJ_DIR) ] || mkdir $(OBJ_DIR) > /dev/null 2>&1
+
+define SRCS_LIST_TO_OBJS
+	$(addprefix $(OBJ_DIR)/, $(addsuffix .o, $(foreach file, $(SRCS), \
+	$(basename $(notdir $(file))))))
+endef
+OBJS = $(SRCS_LIST_TO_OBJS)
+
+SRC_PATHS += $(sort $(foreach file, $(SRCS), $(dir $(file))))
+VPATH :=
+VPATH += $(addprefix :, $(subst  ,:, $(filter-out $($(subst, :, ,$(VPATH))), $(SRC_PATHS))))
+
+$(STRIPX) : $(STRIPX).c
+	$(NATIVE_GCC) $(STRIPX).c -o $(STRIPX)
+
+$(LIBCMINI_CRT):
+	cd $(LIBCMINI_DIR) && make
+
+$(APP) : $(OBJ_DIR) $(DISASM) $(STRIPX) $(LIBCMINI_CRT) $(GEMLIB) $(OBJS)
+	$(CC) $(CXXFLAGS) $(LIBCMINI_CRT) $(OBJS) $(LDFLAGS) -o $(APP)
+	$(STRIP)
+
+$(OBJ_DIR)/mmu.o : mmu.c
+	$(CC) $(INCLUDE) $(CPUFLAGS030) $(CXXFLAGS) -c $< -o $@
+
+$(OBJ_DIR)/cpu.o : cpu.S
+	$(CC) $(INCLUDE) $(CPUFLAGS030) $(SFLAGS) -c $< -o $@
+
+$(OBJ_DIR)/%.o : %.S
+	$(CC) $(INCLUDE) $(CPUFLAGS) $(SFLAGS) -c $< -o $@
+
+$(OBJ_DIR)/%.o : %.c
+	$(CC) $(INCLUDE) $(CPUFLAGS) $(CXXFLAGS) -c $< -o $@
+
+%.disasm : %.c
+	$(CC) $(INCLUDE) $(CPUFLAGS) $(CXXFLAGS) -fverbose-asm -g -S $< -o $@
+
+disasm: $(DISASM)
+
+
+clean:
+	@rm -f *~ *.bak *.disasm obj.0000.* parcp.cmd mapfile
+	@rm -f $(APP)
+	@rm -f $(OBJ_DIR)/*
+	@rm -f $(OBJ_DIR)/.DS_Store
+	@rm -f -d $(OBJ_DIR)
+ifneq ($(DOC),)
+	@rm -f $(DOC_OUT)
+endif

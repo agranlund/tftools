@@ -1,28 +1,31 @@
-#Makefile
-VASM=vasmm68k_mot
-TARGETS=BLITFIX.PRG FASTRAM.PRG MAPROM.PRG MAPROM_C.PRG
-FLAGS=-Ftos -devpac -tos-flags=0 -monst
+DIRS =
+DIRS += blitfix maprom
+DIRS += fpemu mon
+#DIRS += fastram tfctrl
+BUILDDIRS = $(DIRS:%=build-%)
+CLEANDIRS = $(DIRS:%=clean-%)
 
-all: $(TARGETS)
+NATIVE_GCC = gcc
+NATIVE_EXT =
 
-clean:
-	rm -f *.o $(TARGETS)
 
-dist:
-	cp *.PRG ../
+all: $(BUILDDIRS)
+$(DIRS): $(BUILDDIRS)
+$(BUILDDIRS):
+	make -C $(@:build-%=%)
 
-BLITFIX.PRG:
-	rm -f *.o
-	$(VASM) $(FLAGS) BLITFIX.S -o $@
+clean: $(CLEANDIRS)
+$(CLEANDIRS): 
+	make -C $(@:clean-%=%) clean
 
-FASTRAM.PRG:
-	rm -f *.o
-	$(VASM) $(FLAGS) -DOPT_MMU=0 -DOPT_STRAM_CI=1 -DOPT_RELO_ROM=0 -DOPT_RELO_RAM=0 MAPROM.S -o $@
+distclean: clean
+	rm -f ext/stripx/stripx
+	cd ext/vasm && make CPU=m68k SYNTAX=mot clean
+	cd ext/libcmini && make clean
+#	cd ext/gemlib && make clean
 
-MAPROM.PRG:
-	rm -f *.o
-	$(VASM) $(FLAGS) -DOPT_MMU=1 -DOPT_STRAM_CI=1 -DOPT_RELO_ROM=1 -DOPT_RELO_RAM=1 MAPROM.S -o $@
+.PHONY: $(BUILDDIRS)
+.PHONY: $(CLEANDIRS) 
+.PHONY: all clean distclean
 
-MAPROM_C.PRG:
-	rm -f *.o
-	$(VASM) $(FLAGS) -DOPT_MMU=1 -DOPT_STRAM_CI=0 -DOPT_RELO_ROM=1 -DOPT_RELO_RAM=1 MAPROM.S -o $@
+

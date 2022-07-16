@@ -1,0 +1,23 @@
+maprom.prg / maprom_c.prg
+
+These programs registers TT-RAM with the operating system.
+Additionally they provide a speedup by placing the following in TT-RAM:
+- ROM image (0xE00000 or 0xFC0000)
+- System vectors + super stack ($0000-$0FFF)
+- Some TOS system variables ($2000-7FFF, TOS 2.06 only)
+
+maprom_c.prg works the same as maprom.prg but also allows L1 cache
+to be enabled for ST-RAM as long as your accelerator supports it.
+This can speed up games that aren't possible to run from fastram but it
+may cause incompatibility with TOS206 and caches enabled.
+
+Stick in in your AUTO folder, preferably as the very first item, and you
+will have a faster TOS experience and the ability for applications to
+run from FastRAM, regardless if you are using EmuTOS or TOS 2.06
+
+------------------------------------------------------------------------------
+This programs is distributed under the GPL version 2 license.
+See src/maprom/license.txt for details.
+Parts of this programs is derived from work done by the EmuTOS team.
+Parts of this program is using COOKIE.S by Arnd Beissner
+------------------------------------------------------------------------------

@@ -1,0 +1,13 @@
+fastram.prg
+
+Detect and register TT-RAM with the operating system.
+It creates the DMA Fastram buffer and cookie.
+This one is useful as an alternative to maprom.prg if you only want to
+enable fastram without any of the extras that maprom provides.
+
+------------------------------------------------------------------------------
+This programs is distributed under the GPL version 2 license.
+See src/maprom/license.txt for details.
+Parts of this programs is derived from work done by the EmuTOS team.
+Parts of this program is using COOKIE.S by Arnd Beissner
+------------------------------------------------------------------------------
