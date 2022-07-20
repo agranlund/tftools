@@ -10,9 +10,6 @@ src/ext/vasm/obj/*.o
 src/ext/vasm/vasmm68k_mot
 src/ext/vasm/vobjdump
 
-src/common/tf53x.*
-src/common/fastram.*
-src/common/mmu.*
 src/tfctrl/
 tf536.prg
 src/fastram/
