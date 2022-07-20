@@ -8,6 +8,15 @@ static bool _StayResident = RESIDENT_NONE;
 uint32 _CPUCOOKIE = 0;
 uint16 _CPU = 0;
 
+void sys_print(const char* fmt, ...)
+{
+	va_list va;
+	va_start(va, fmt);
+	vprintf(fmt, va);
+	va_end(va);
+	printf("\n\r");
+}
+
 void dbg_print(const char* file, int line, const char* fmt, ...)
 {
 	printf("%s:%d : ", file, line);

@@ -27,7 +27,9 @@ inline uint16 getCPU() {
 void StayResident(uint16 type);
 
 extern void dbg_print(const char* file, int line, const char* fmt, ...);
-#define DLOG(...)   printf(__VA_ARGS__ "\n\r")
+extern void sys_print(const char* fmt, ...);
+#define DINFO(...)  sys_print(__VA_ARGS__)
+#define DLOG(...)   sys_print(__VA_ARGS__)
 #define DFATAL(...)	dbg_print(__FILE__, __LINE__, __VA_ARGS__)
 #ifdef DEBUG
 #define DPRINT(...)	dbg_print(__FILE__, __LINE__, __VA_ARGS__)
