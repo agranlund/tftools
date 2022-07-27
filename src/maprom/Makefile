@@ -8,6 +8,7 @@ SRC = 	../common/tf53x.c \
 		../common/mmu.c \
 		main.c \
 		settings.c \
+		card.c \
 		card_TF536r2.c \
 		card_TF536r2asm.S \
 		card_DFB1.c

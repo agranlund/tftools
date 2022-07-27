@@ -38,6 +38,7 @@ int32 xbraSet(int16 idx, uint32 id, uint32 addr);
 uint32 xbraFind(int16 idx, uint32 id);
 void xbraRemove(int16 idx, uint32 id);
 
+void printBootInfo(char* left, char* right, bool stamp);
 
 extern void dbg_print(const char* file, int line, const char* fmt, ...);
 extern void sys_print(const char* fmt, ...);

@@ -17,37 +17,7 @@
 // defines
 //
 //------------------------------------------------------------
-#define ASSUME_UNKNOWN_CARD_IS_TF53X		1
-
 long _stksize = (4 * 1024);
-
-
-//------------------------------------------------------------
-//
-// card identification
-//
-//------------------------------------------------------------
-typedef bool(*CardEnum)(struct TFCard*);
-
-extern bool card_TF536r2_Find(struct TFCard* card);
-extern bool card_DFB1_Find(struct TFCard* card);
-
-static const CardEnum findFuncs[] = {
-	card_TF536r2_Find,
-	card_DFB1_Find,
-};
-
-bool GetCard(struct TFCard* card, struct TFSettings* settings) {
-	memset(card, 0, sizeof(struct TFCard));
-	if (settings->detectCard) {
-		for (uint16 i=0; i<sizeof(findFuncs) / sizeof(findFuncs[0]); i++) {
-			if (findFuncs[i](card)) {
-				return true;
-			}
-		}
-	}
-	return false;
-}
 
 
 //------------------------------------------------------------
@@ -200,36 +170,8 @@ int superMain(int argc, char** argv)
 	DPRINT(" version:  %s", *card.ver ? card.ver : "unknown");
 	DPRINT(" caps:     %08x", card.caps);
 
-
-#if ASSUME_UNKNOWN_CARD_IS_TF53X
-	if (*card.name == 0) {
-		uint32 tt_top = *((volatile uint32*)0x5a4);
-		uint32 tt_siz = (tt_top > 0x01000000) ? (tt_top - 0x01000000) : 0;
-		tt_siz = (((tt_siz >> 12) + 255) & ~255L) >> 8;
-		sprintf(card.name, tt_siz > 4 ? "TF536" : "TF534");
-	}
-#endif
-
-	int16 len = 40;
-	int16 l1 = strlen(APP_NAME);
-	int16 l2 = strlen(__DATE__);
-	int16 l3 = strlen(card.name);
-	int16 pad = len - l1 - 4 - l2 - l3 - 2;
-
-	Cconws("\r\n\x1Bp");
-	for (uint16 i=0; i<len; i++) {
-		Cconws(" ");
-	}
-	Cconws("\r ");
-	Cconws(APP_NAME);
-	Cconws("  : ");
-	Cconws(__DATE__);
-	for (uint16 i=0; i<pad; i++) {
-		Cconws(" ");
-	}
-	Cconws(card.name);
-	Cconws("\x1Bq\r\n");
-
+	// Print on-screen info
+	printBootInfo(APP_NAME" ", card.name, true);
 
 	// Check if mmu is available
 	if (settings.enableMMU) {

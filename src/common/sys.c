@@ -45,6 +45,36 @@ void StayResident(uint16 flag) {
 	}
 }
 
+void printBootInfo(char* left, char* right, bool stamp)
+{
+	int16 len = 39;
+	int16 l1 = left ? strlen(left) : 0;
+	int16 l2 = stamp ? (3 + strlen(__DATE__)) : 0;
+	int16 l3 = right ? strlen(right) : 0;
+	int16 pad = len - l1 - l2 - l3 - 2;
+
+	Cconws("\r\n\x1Bp");
+	for (uint16 i=0; i<len; i++) {
+		Cconws(" ");
+	}
+	Cconws("\r ");
+	if (left) {
+		Cconws(left);
+	}
+	if (stamp) {
+		Cconws(" : ");
+		Cconws(__DATE__);
+	}
+	for (uint16 i=0; i<pad; i++) {
+		Cconws(" ");
+	}
+	if (right) {
+		Cconws(right);
+	}
+	Cconws("\x1Bq\r\n");	
+}
+
+
 void* AllocAligned(uint32 size, uint16 alignment, uint8 flag)
 {
 	if (size == 0)
