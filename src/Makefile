@@ -1,7 +1,10 @@
 DIRS =
-DIRS += blitfix maprom
-DIRS += fpemu mon
-DIRS += tf536 tf536_l2
+#DIRS += maprom_old
+DIRS += maprom
+DIRS += fastram
+DIRS += blitfix
+DIRS += fpemu
+DIRS += mon
 BUILDDIRS = $(DIRS:%=build-%)
 CLEANDIRS = $(DIRS:%=clean-%)
 

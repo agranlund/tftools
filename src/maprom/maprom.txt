@@ -1,19 +1,51 @@
-maprom.prg / maprom_c.prg
+maprom.prg
+Run as one of the first items in the AUTO folder.
 
-These programs registers TT-RAM with the operating system.
-Additionally they provide a speedup by placing the following in TT-RAM:
-- ROM image (0xE00000 or 0xFC0000)
-- System vectors + super stack ($0000-$0FFF)
-- Some TOS system variables ($2000-7FFF, TOS 2.06 only)
+Registers fastram, FRB and MMU as needed depending on TOS version.
+Can map rom, and parts of ram to fastram.
+Some features may depend on specific card/firmwares.
 
-maprom_c.prg works the same as maprom.prg but also allows L1 cache
-to be enabled for ST-RAM as long as your accelerator supports it.
-This can speed up games that aren't possible to run from fastram but it
-may cause incompatibility with TOS206 and caches enabled.
+It will create a settings file on first launch with sensible defaults.
+If you launch the program from the AUTO folder then you will
+find TF536.INF in the root of the boot drive.
+Otherwise it should end up right next to where the program is.
 
-Stick in in your AUTO folder, preferably as the very first item, and you
-will have a faster TOS experience and the ability for applications to
-run from FastRAM, regardless if you are using EmuTOS or TOS 2.06
+
+Settings:
+
+PMMU: <bool>        Allow / Disallow using the PMMU
+                    Some features will not work with MMU disabled.
+                    This option is useful when you want to use
+                    memory protection in MiNT.
+
+detect: <bool>      Enable card detection for card-specific features
+
+romL1: <bool>       Enable L1 cache for ROM.
+                    Disabling requires MMU
+
+ramL1: <bool>       Enable L1 cache for ST-RAM.
+                    Disabling requires MMU
+
+romL2: <bool>       Puts entire ROM in fastram for fast access.
+                    This is normally done using the MMU but some
+                    cards may be able to do it in firmware.
+
+zeroL2: <bool>      Puts zero page in fastram.
+                    This is normally done using the MMU but some
+                    cards may be able to do it in firmware.
+
+ramL2: <bool>       Makes read access from ST-RAM very fast.
+                    This feature requires firmware support
+                    on the card.
+
+fixSTGA: <bool>     Fix cache related STGA issues.
+                    Requires MMU to cache inhibit $C00000-$DFFFFF
+
+fixDMA: <int>       Fix cache related DMA issues.
+                    0: off
+                    1: normal (cache inhibit $0000-$7FFF)
+                    2: full (additional fix for ST-RAM L2 cache)
+
 
 ------------------------------------------------------------------------------
 This programs is distributed under the GPL version 2 license.

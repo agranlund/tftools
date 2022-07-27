@@ -6,7 +6,9 @@
 	],
 	"settings": {
 		"files.associations": {
-			"cookie.h": "c"
+			"cookie.h": "c",
+			"MAIN.C": "cpp",
+			"MMU.C": "cpp"
 		}
 	}
 }

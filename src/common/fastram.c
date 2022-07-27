@@ -96,13 +96,35 @@ bool InstallFastRam()
 		return false;
 	}
 
+	bool haveMaddalt = true;
+	bool haveMxalloc = true;
+
+	if (getTOS() < 0x200) {
+		// todo: (KAOS) TOS1.x
+		//	- Implement and install Maddalt + Mxalloc
+		//	- Implement and install Malloc + Mfree + Pexec replacments
+		haveMaddalt = false;
+		haveMxalloc = false;
+	}
+
 	// install standard mmu table
 	MMURegs r; mmuGet(&r);
 	if ((r.tc & 0x80000000) == 0)
 	{
-		DPRINT("Creating standard MMU config");
+		// TOS2+ : use default 0x700 MMU location
+		// TOS1 has no standard MMU location so we're going to put it in fastram
+		uint32 defaultLocationForMMU = 0x700;
+		if (getTOS() < 0x200) {
+			if (haveMxalloc) {
+				defaultLocationForMMU = (uint32) AllocAligned(256, 256, 3);
+			} else {
+				defaultLocationForMMU = (addr + size - 256) & 0xFFFFFF00;
+				size = (defaultLocationForMMU - addr);
+			}
+		}
+		DPRINT("Creating standard MMU config at %08x", defaultLocationForMMU);
 		mmuDisable();
-		if (!mmuCreate((uint32*)0x700, 32 * 1024))
+		if (!mmuCreate((uint32*)defaultLocationForMMU, 32 * 1024))
 		{
 			DPRINT("Failed creating MMU config");
 			return -1;
@@ -115,7 +137,7 @@ bool InstallFastRam()
 	if (!cookieGet(ALTRAM_FRB_COOKIE, 0))
 	{
 		DPRINT("Allocating FRB of %dKb", ALTRAM_FRB_SIZE / 1024);
-		uint32 frb = (uint32) Mxalloc(ALTRAM_FRB_SIZE, 0);
+		uint32 frb = (uint32) AllocAligned(ALTRAM_FRB_SIZE, 4, 0);
 		if (frb == 0)
 		{
 			DPRINT("Failed allocating FRB");
@@ -128,9 +150,11 @@ bool InstallFastRam()
 		DPRINT("FRB already installed");
 	}
 
-	// install fastram
-	DPRINT("Maddalt");
-	Maddalt(addr, size);
+	// install fastram.
+	if (haveMaddalt) {
+		DPRINT("Maddalt");
+		Maddalt(addr, size);
+	}
 
 	// make fastram valid
 	*((volatile uint32*)0x5a4) = addr + size;

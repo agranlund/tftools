@@ -6,8 +6,10 @@
 #define TF536_ADDR_REG          0x00FFFD10
 #define TF536_ADDR_INF          0x00FFFD00
 #define TF536_ROM_SHADOW_64     0x04B00000
+#define TF536_REG_SHADOW_64     0x04BF0000
 #define TF536_RAM_SHADOW_64     0x04C00000
 #define TF536_ROM_SHADOW_128    0x08B00000
+#define TF536_REG_SHADOW_128    0x08BF0000
 #define TF536_RAM_SHADOW_128    0x08C00000
 
 #define TF536_BIT_ROM_L1        0
@@ -37,6 +39,7 @@ typedef struct
 bool tf536_getInfo(TF536Inf* inf);
 uint32 tf536_getRomShadowAddr();
 uint32 tf536_getRamShadowAddr();
+uint32 tf536_getRegShadowAddr();
 
 uint8 tf536_getReg();
 void  tf536_setReg(uint8 reg);

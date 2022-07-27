@@ -24,7 +24,20 @@ inline uint16 getCPU() {
 	return _CPU;
 }
 
+inline uint16 getTOS() {
+    extern uint16 _TOS;
+    return _TOS;
+}
+
 void StayResident(uint16 type);
+
+void* AllocAligned(uint32 size, uint16 alignment, uint8 flag);
+void FreeAligned(void* ptr);
+
+int32 xbraSet(int16 idx, uint32 id, uint32 addr);
+uint32 xbraFind(int16 idx, uint32 id);
+void xbraRemove(int16 idx, uint32 id);
+
 
 extern void dbg_print(const char* file, int line, const char* fmt, ...);
 extern void sys_print(const char* fmt, ...);

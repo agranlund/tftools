@@ -4,10 +4,12 @@
 	.globl	_disableInterrupts
 	.globl	_restoreInterrupts
 	.globl	_safeRead8
+	.globl	_testRead16
 
 	.globl	_jump
 	.globl	_flushCache020
 	.globl	_flushCache040
+	.globl	_disableCache020
 	.globl	_getCACR
 	.globl	_setCACR
 	.globl	_getSR
@@ -27,6 +29,14 @@ _flushCache020:
 	nop
 	.word	0x4e7a,0x0002		// movec cacr,d0
 	ori.w	#0x0808,d0			// flush
+	.word   0x4e7b,0x0002		// movec d0,cacr
+	movec	d0,cacr
+	nop
+	rts
+	
+_disableCache020:
+	nop
+	move.w	#0x0808,d0			// flush + disable
 	.word   0x4e7b,0x0002		// movec d0,cacr
 	movec	d0,cacr
 	nop
@@ -88,7 +98,7 @@ _restoreInterrupts:
 
 _safeRead8:
 	move.l	4(sp),a0			//; a0 = src addr
-	moveq	#0,d0				//; d0 = return value
+	move.b	#0,d0				//; d0 = return value
 	move.l	0x8,-(sp)			//; save old berr handler
 	move.l	sp,a1				//; a1 = old stack ptr
 	move.l	#.sr8err,0x8		//; install new bus handler
@@ -100,3 +110,17 @@ _safeRead8:
 	move.l	(sp)+,0x8			//; restore original berr handler
 	rts
 
+_testRead16:
+	move.l	4(sp),a0			//; a0 = src addr
+	move.l	#0,d0				//; d0 = return value
+	move.l	0x8,-(sp)			//; save old berr handler
+	move.l	sp,a1				//; a1 = old stack ptr
+	move.l	#.tr8err,0x8		//; install new bus handler
+	move.b	(a0),d0				//; try read
+	move.l	(sp)+,0x8			//; restore original berr handler
+	move.l	#1,d0
+	rts
+.tr8err:
+	move.l	a1,sp				//; restore stack to before bus error
+	move.l	(sp)+,0x8			//; restore original berr handler
+	rts

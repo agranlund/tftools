@@ -55,3 +55,13 @@ uint32 tf536_getRamShadowAddr()
     return addr;
 }
 
+uint32 tf536_getRegShadowAddr()
+{
+    TF536Inf inf;
+    if (!tf536_getInfo(&inf))
+        return 0;
+
+    uint32 addr = (inf.ramsize == 64) ? TF536_REG_SHADOW_64 : TF536_REG_SHADOW_128;
+    return addr;
+}
+

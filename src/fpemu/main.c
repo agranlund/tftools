@@ -3,59 +3,9 @@
 #include "sys.h"
 #include "cookie.h"
 #include "cpu.h"
+#include "vbr.h"
 
 extern int fpe_install();
-static uint32 maskedVbr[256];
-static uint16 maskedJumptable[256*4];
-
-
-void maskVectors()
-{
-	// no interrupts here...
-	uint16 sr = disableInterrupts();
-
-	// get old vbr
-	uint32* oldVectors = getVBR();
-	uint32 vbr = (uint32) oldVectors;
-
-	// virtualise the VBR
-	if (vbr < 0x10000) {
-		for(uint16 i=0,j=0; i<256; i++)
-		{
-			maskedVbr[i] = (uint32) &maskedJumptable[j];
-			maskedJumptable[j++] = 0x2F38;			// move.l <addr>.w,-(sp)
-			maskedJumptable[j++] = vbr;				// addr
-			maskedJumptable[j++] = 0x4E75;			// rts
-			vbr += 4;
-		}
-	} else {
-		for(uint16 i=0,j=0; i<256; i++)
-		{
-			maskedVbr[i] = (uint32) &maskedJumptable[j];
-			maskedJumptable[j++] = 0x2F39;   		// move.l <addr>.l,-(sp)
-			maskedJumptable[j++] = (vbr >> 16);		// hi addr
-			maskedJumptable[j++] = (vbr & 0xFFFF);  // lo addr
-			maskedJumptable[j++] = 0x4E75;   		// rts
-			vbr += 4;
-		}
-	}
-
-	// lineF
-	maskedVbr[11] = oldVectors[11];
-
-	// flush caches
-	flushCache();
-
-	// replace vbr
-	setVBR((uint32*)maskedVbr);
-
-	// flush caches
-	flushCache();
-
-	// restore interrupts
-	setSR(sr);
-}
-
 
 int superMain(int argc, char** argv)
 {
@@ -91,7 +41,13 @@ int superMain(int argc, char** argv)
 
 	// take control of the vectors
 	if (1 && (cpu >= 10)) {
-		maskVectors();
+		struct VBRProxy* vbrx = vbrGetOrCreateProxy(VBRX_IDENT);
+		if (vbrx) {
+			uint16 sr = disableInterrupts();
+			vbrx->vbr[11] = vbrx->old[11];
+			flushCache();
+			setSR(sr);
+		}
 	}
 
 	// install cookie and stay resident
@@ -99,4 +55,3 @@ int superMain(int argc, char** argv)
 	StayResident(RESIDENT_ALL);
 	return 0;
 }
-

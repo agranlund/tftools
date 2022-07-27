@@ -3,10 +3,17 @@
 #include "cpu.h"
 #include "sys.h"
 
+#define MMUDEBUG 0
+
+#if MMUDEBUG
+#define MMUPRINT(...)	DPRINT(__VA_ARGS__)
+#else
+#define MMUPRINT(...)
+#endif
+
 static const uint32 MMU_TABLE  = 0x02;
 static const uint32 MMU_PAGE   = 0x01;
 static const uint32 MMU_CI     = 0x40;
-
 
 void mmuFlush()
 {
@@ -139,9 +146,9 @@ bool mmuCreate(uint32* root, uint16 pagesize)
 
 	if (root == 0)
 	{
-		uint32 m = (Mxalloc(256 + size, 3) + 255) & 0xFFFFFF00;
+		uint32 m = (uint32) AllocAligned(size, 256, 3);
 		if (m == 0) {
-			DPRINT(" Failed alloc %d bytes", 256 + size);
+			DPRINT(" Failed alloc %d bytes", size);
 			return false;
 		}
 		root = (uint32*) m;
@@ -240,6 +247,12 @@ bool mmuCreate(uint32* root, uint16 pagesize)
 	DPRINT(" crp  = %08x %08x", r.crp[0], r.crp[1]);
 	DPRINT(" srp  = %08x %08x", r.srp[0], r.srp[1]);
 	DPRINT(" ttr  = %08x %08x", r.ttr0, r.ttr1);
+	DPRINT(" tia  = %08x", tia);
+	DPRINT(" tib0 = %08x", tib0);
+	DPRINT(" tib1 = %08x", tib1);
+	DPRINT(" tic  = %08x", tic);
+	DPRINT(" tid  = %08x", 0);
+
 	mmuSet(&r);
 	DPRINT(" Done");
 	return true;
@@ -263,60 +276,95 @@ uint32 mmuGetPageSize()
 	}
 }
 
-
+/*
 void mmuMap(uint32 log, uint32 phys, uint32 size, uint32 flag)
 {
 
 }
+*/
 
 
-bool mmuGetEntry(uint32 addr, uint32* tia, uint32* tib, uint32* tic, uint32* tid)
+bool mmuGetEntry(uint32 addr, uint32** tia, uint32** tib, uint32** tic, uint32** tid)
 {
-	*tia = 0;
-	*tib = 0;
-	*tic = 0;
-	*tid = 0;
+	static uint32 bmask[16] = {
+		0x00000000,
+		0x80000000, 0xC0000000, 0xE0000000, 0xF0000000,
+		0xF8000000, 0xFC000000, 0xFE000000, 0xFF000000,
+		0xFF800000, 0xFFC00000 ,0xFFE00000, 0xFFF00000,
+		0xFFF80000, 0xFFFC0000, 0xFFFE0000 };
+
+	*tia = 0; *tib = 0; *tic = 0; *tid = 0;
 
 	MMURegs r;
 	mmuGet(&r);
 
+	uint32 len = (1 << 31);
+	uint16 mshft = 0;
+	uint16 ashft = 32;
+
 	// tia
+	MMUPRINT("get tia");
 	uint32 a = addr;
 	uint32* root = (uint32*) r.crp[1];
 	uint32 bits = (r.tc >> 12) & 0xF;
-	uint32 len  = (1 << bits);
-	uint32 idx  = a / len;
-	*tia = root[idx];
-	if (*tia & MMU_PAGE)
+	uint32 mask = bmask[bits] >> mshft;
+	mshft += bits; ashft -= bits;
+	uint32 idx = (a & mask) >> ashft;
+	MMUPRINT("root = %08x, bits = %d, mask = %08x", root, bits, mask);
+	MMUPRINT("mshft = %d, ashift = %d, idx = %d", mshft, ashft, idx);
+	*tia = &root[idx];
+	MMUPRINT("tia = %08x (%08x)", &root[idx], root[idx]);
+	if (root[idx] & MMU_PAGE) {
+		MMUPRINT("Early termination page desc");
 		return true;
+	}
 
 	// tib
-	root = (uint32*) (0xFFFFFF00 & *tia);
+	MMUPRINT("get tib");
+	root = (uint32*) (0xFFFFFFF0 & root[idx]);
 	a = a - (idx * len);
 	bits = (r.tc >> 8) & 0xF;
-	len  = (1 << bits);
-	idx  = a / len;
-	*tib = root[idx];
-	if (*tib & MMU_PAGE)
+	mask = bmask[bits] >> mshft;
+	mshft += bits; ashft -= bits;
+	idx = (a & mask) >> ashft;
+	MMUPRINT("root = %08x, bits = %d, mask = %08x", root, bits, mask);
+	MMUPRINT("mshft = %d, ashift = %d, idx = %d", mshft, ashft, idx);
+	*tib = &root[idx];
+	MMUPRINT("tib = %08x (%08x)", &root[idx], root[idx]);
+	if (root[idx] & MMU_PAGE) {
+		MMUPRINT("Early termination page desc");
 		return true;
+	}
 
 	// tic
-	root = (uint32*) (0xFFFFFF00 & *tib);
+	MMUPRINT("get tic");
+	root = (uint32*) (0xFFFFFFF0 & root[idx]);
 	a = a - (idx * len);
 	bits = (r.tc >> 4) & 0xF;
-	len  = (1 << bits);
-	idx  = a / len;
-	*tic = root[idx];
-	if (*tib & MMU_PAGE)
+	mask = bmask[bits] >> mshft;
+	mshft += bits; ashft -= bits;
+	idx = (a & mask) >> ashft;
+	MMUPRINT("root = %08x, bits = %d, mask = %08x", root, bits, mask);
+	MMUPRINT("mshft = %d, ashift = %d, idx = %d", mshft, ashft, idx);
+	*tic = &root[idx];
+	MMUPRINT("tic = %08x (%08x)", &root[idx], root[idx]);
+	if (root[idx] & MMU_PAGE) {
+		MMUPRINT("Early termination page desc");
 		return true;
+	}
 
 	// tid
-	root = (uint32*) (0xFFFFFF00 & *tic);
+	MMUPRINT("get tid");
+	root = (uint32*) (0xFFFFFFF0 & root[idx]);
 	a = a - (idx * len);
 	bits = (r.tc >> 0) & 0xF;
-	len  = (1 << bits);
-	idx  = a / len;
-	*tid = root[idx];
+	mask = bmask[bits] >> mshft;
+	mshft += bits; ashft -= bits;
+	idx = (a & mask) >> ashft;
+	MMUPRINT("root = %08x, bits = %d, mask = %08x", root, bits, mask);
+	MMUPRINT("mshft = %d, ashift = %d, idx = %d", mshft, ashft, idx);
+	*tid = &root[idx];
+	MMUPRINT("tid = %08x (%08x)", &root[idx], root[idx]);
 	return true;
 }
 

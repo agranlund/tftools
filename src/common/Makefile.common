@@ -65,6 +65,7 @@ DISASM =
 SRCS =	../common/lgcc.S \
 		../common/cpu.S \
 		../common/sys.c \
+		../common/vbr.c \
 		../common/cookie.c \
 		$(SRC)
 
