@@ -12,7 +12,6 @@ src/ext/vasm/vobjdump
 *.o
 src/dmatest/
 src/tfctrl/
-src/fastram/
 src/ext/gemlib/
 src/ext/parcp421/
 
