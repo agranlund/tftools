@@ -18,8 +18,13 @@
 ; Anders Granlund, 2019
 ;
 ;--------------------------------------------------------------------------
-	include "COOKIE.S"
 
+	section text
+	bra _entrypoint
+
+;--------------------------------------------------------------
+
+	include "COOKIE.S"
 
 ;--------------------------------------------------------------
 COOKIE_MAGIC	EQU	$424f4646		; 'BOFF'
@@ -96,6 +101,7 @@ _entrypoint:
   	add.l	$1c(a0),d0				; bss size
 	lea		gTsrSize(pc),a1
 	move.l	d0,(a1)
+
   	move.l	d0,-(sp)				; Mshrink()
 	move.l	a0,-(sp)
 	clr.w	-(sp)
@@ -112,6 +118,7 @@ _entrypoint:
 	clr.b	gTosType
 	clr.l	gOldSoftTbl
 	clr.l	gOldHardTbl
+
 
 	lea		Main(pc),a0
 	bsr		SYS_SupervisorCall
