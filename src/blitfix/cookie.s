@@ -49,7 +49,7 @@ _resvector      equ     $42a
 
 
 		
-		section text
+;		section text
 
 ;--------------------------------------------------------------------
 ; CK_JarInstalled
@@ -354,7 +354,7 @@ CK_SetOptions:
 
 ;--------------------------------------------------------------------
 
-		section data
+;		section data
 		
 cookieJarIncrement:
 		dc.w	20
@@ -364,7 +364,7 @@ cookieJarXBRA:
 
 ;--------------------------------------------------------------------
 
-		section bss
+;		section bss
 
 oldResValid:
 		ds.l	1

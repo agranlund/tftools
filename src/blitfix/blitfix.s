@@ -19,75 +19,13 @@
 ;
 ;--------------------------------------------------------------------------
 
-	section text
-	bra _entrypoint
-
-;--------------------------------------------------------------
-
-	include "COOKIE.S"
-
 ;--------------------------------------------------------------
 COOKIE_MAGIC	EQU	$424f4646		; 'BOFF'
-
 OPT_SAFE_VADDR	SET	0				; always check _v_bas_ad ?
 OPT_SAFE_TEXT	SET	1				; no blitter if using scratchp
-;--------------------------------------------------------------
 
 
-;--------------------------------------------------------------
-	section data
-;--------------------------------------------------------------
-sVersion		dc.b	13,10,$1b,'p',"BlitterFix v1.2 active",$1b,'q',13,10,0
-
-sPRG_NVDI:		dc.b  	"\AUTO\NVDI",0
-sPRG_WARP9:		dc.b  	"\AUTO\WARP9",0
-sBlitOffPrgs:	dc.l 	sPRG_NVDI,sPRG_WARP9,0
-
-
-;--------------------------------------------------------------
-	section bss
-;--------------------------------------------------------------
-gStackTop		ds.l 	256			; 1024 byte stack
-gStack			ds.l 	2
-gTsrSize		ds.l 	1			; program size for TSR
-gKeepResident	ds.b	1
-gBlitTempOff	ds.b	1
-gLineAvars		ds.l	1
-gLogscreen		ds.l	1
-gPrevTrap1		ds.l	1
-gPrevTrap14		ds.l	1
-gBlitStatus		ds.w	1
-gTosVersion		ds.w	1
-gTosType		ds.b	1			; 0=unknown, 1=atari, 2=emutos
-gOldSoftTbl		ds.l	1
-gOldHardTbl		ds.l	1
-gOldSoftGfx0	ds.l	1
-gOldSoftGfx1	ds.l	1
-gOldSoftGfx2	ds.l	1
-gOldSoftGfx3	ds.l	1
-gOldSoftGfx4	ds.l	1
-gOldSoftGfx5	ds.l	1
-gOldSoftGfx6	ds.l	1
-gOldSoftGfx7	ds.l	1
-gOldSoftGfx8	ds.l	1
-gOldSoftGfx9	ds.l	1
-gOldHardGfx0	ds.l	1
-gOldHardGfx1	ds.l	1
-gOldHardGfx2	ds.l	1
-gOldHardGfx3	ds.l	1
-gOldHardGfx4	ds.l	1
-gOldHardGfx5	ds.l	1
-gOldHardGfx6	ds.l	1
-gOldHardGfx7	ds.l	1
-gOldHardGfx8	ds.l	1
-gOldHardGfx9	ds.l	1
-gNewHardGfxN	ds.l	10
-gNewHardGfxF	ds.l	10
-
-
-;--------------------------------------------------------------
 	section text
-;--------------------------------------------------------------
 
 ;--------------------------------------------------------------
 _entrypoint:
@@ -135,6 +73,7 @@ MainSuccess:
 	move.l	(a0),-(sp)
 	move.w	#49,-(sp)
 	trap	#1						; Ptermres()
+
 
 ;--------------------------------------------------------------
 Main:
@@ -707,4 +646,62 @@ TTRAM_GetInstalled:
 	moveq.l	#0,d1
 	moveq.l	#0,d2
 	rts
+
+
+
+	include "COOKIE.S"
+
+
+
+
+;--------------------------------------------------------------
+;	section data
+;--------------------------------------------------------------
+sVersion		dc.b	13,10,$1b,'p',"BlitterFix v1.2 active",$1b,'q',13,10,0
+
+sPRG_NVDI:		dc.b  	"\AUTO\NVDI",0
+sPRG_WARP9:		dc.b  	"\AUTO\WARP9",0
+sBlitOffPrgs:	dc.l 	sPRG_NVDI,sPRG_WARP9,0
+
+
+
+;--------------------------------------------------------------
+;	section bss
+;--------------------------------------------------------------
+gStackTop		ds.l 	256			; 1024 byte stack
+gStack			ds.l 	2
+gTsrSize		ds.l 	1			; program size for TSR
+gKeepResident	ds.b	1
+gBlitTempOff	ds.b	1
+gLineAvars		ds.l	1
+gLogscreen		ds.l	1
+gPrevTrap1		ds.l	1
+gPrevTrap14		ds.l	1
+gBlitStatus		ds.w	1
+gTosVersion		ds.w	1
+gTosType		ds.b	1			; 0=unknown, 1=atari, 2=emutos
+gOldSoftTbl		ds.l	1
+gOldHardTbl		ds.l	1
+gOldSoftGfx0	ds.l	1
+gOldSoftGfx1	ds.l	1
+gOldSoftGfx2	ds.l	1
+gOldSoftGfx3	ds.l	1
+gOldSoftGfx4	ds.l	1
+gOldSoftGfx5	ds.l	1
+gOldSoftGfx6	ds.l	1
+gOldSoftGfx7	ds.l	1
+gOldSoftGfx8	ds.l	1
+gOldSoftGfx9	ds.l	1
+gOldHardGfx0	ds.l	1
+gOldHardGfx1	ds.l	1
+gOldHardGfx2	ds.l	1
+gOldHardGfx3	ds.l	1
+gOldHardGfx4	ds.l	1
+gOldHardGfx5	ds.l	1
+gOldHardGfx6	ds.l	1
+gOldHardGfx7	ds.l	1
+gOldHardGfx8	ds.l	1
+gOldHardGfx9	ds.l	1
+gNewHardGfxN	ds.l	10
+gNewHardGfxF	ds.l	10
 
